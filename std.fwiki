@@ -1,0 +1,1 @@
+@var<T> if(cond : Bool, then : T, else : T) : T = @native(if : T)

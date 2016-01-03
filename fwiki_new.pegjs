@@ -274,6 +274,16 @@ atom
         return e;
     }
     / function_expression
+    / native_expression
+
+native_expression
+    = '@native' _ '(' _ i:identifier ':' _ t:type ')' _ {
+        return {
+            node : "native",
+            native : i,
+            type : t
+        };
+    }
 
 function_expression
     = '@function' _ p:('(' _ parameter_list ')'_ )? t:(':' _ type)? '{' _ e:program '}' _ {

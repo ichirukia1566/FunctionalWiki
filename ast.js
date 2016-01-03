@@ -1,3 +1,9 @@
+var natives = {
+    if : function (symbols) {
+        return symbols.cond.value ? symbols.then.value : symbols.else.value;
+    },
+};
+
 Array.prototype.clone = function() {
     return this.slice();
 };
@@ -39,6 +45,12 @@ function parse(node, symbols, check_only) {
         member : function () {
             // TODO
         },
+        native : function () {
+            return {
+                type : node.type,
+                value : check_only ? undefined : natives[node.native](symbols)
+            };
+        }
         call : function () {
             var lhs = parse(node.function, symbols, check_only);
             if (lhs.type[0] === '@array') {
@@ -70,7 +82,11 @@ function parse(node, symbols, check_only) {
                     if (remaining_params.length === 0) {
                         return {
                             type : lhs.type[2],
-                            value : parse(lhs.value.body, closure_symbols, check_only).value,
+                            value : parse(
+                                    lhs.value.body
+                                    , closure_symbols
+                                    , check_only
+                                ).value,
                         };
                     } else {
                         return {
@@ -113,7 +129,9 @@ function parse(node, symbols, check_only) {
             if (parameters.length === 0) {
                 return {
                     type : return_type,
-                    value : parse(node.type, symbols, check_only).value
+                    value : check_only 
+                        ? undefined
+                        : parse(node.body, symbols, check_only).value
                 };
             } else {
                 var generate_type = function (parameters) {
@@ -141,7 +159,10 @@ function parse(node, symbols, check_only) {
         },
         array : function () {
             if (node.elements.length === 0) {
-                // TODO: Treat it as @template<T>[T]
+                return {
+                    type : ['@template', ['T'], ['@array', 'T']],
+                    value : []
+                };
             } else {
                 var type = parse(node.elements[0], symbols, true).type;
                 for (var i = 1; i < node.elements.length; ++i) {
@@ -167,4 +188,5 @@ function parse(node, symbols, check_only) {
             return {type : ['std', node.type], value : node.value};
         }
     };
+    return parser[node.type]();
 }
