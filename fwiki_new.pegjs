@@ -3,12 +3,9 @@
         return {
             node : "call",
             function : {
-                node : "call",
-                function : {
-                    node : "operator",
-                    name : op
-                },
-                argument : a
+                node : "member",
+                object : a,
+                member : op
             },
             argument : b
         };
@@ -214,12 +211,9 @@ unary_expression
     = postfix_expression
     / op:("+" / "-" / "!" / "~") _ expr:unary_expression { 
         return {
-            node : "call", 
-            function : {
-                node : "operator",
-                name : op
-            },
-            arguments : [expr]
+            node : "member", 
+            object : expr,
+            member : op
         }; 
     }   
     
@@ -245,11 +239,13 @@ template_expression
     / member_expression
 
 template_application
-    = t:identifier "<" _ a:template_parameter_list ">" _ {
+    = t:(empty_array {return "@array";} / identifier) 
+        "<" _ a:template_parameter_list ">" _ 
+    {
         return {
             node : "template_application",
             template : t,
-            arguments : a
+            argument : a
         };
     }
 
@@ -343,13 +339,18 @@ int_literal
     }
 
 array_literal
-    = '[' _ es:(e:expression ',' _ {return e;})* ']' _ {
+    = empty_array {
+        return {node : "array", elements : []};
+    }
+    / '[' _ es:(e:expression ',' _ {return e;})+ ']' _ {
         return {node : "array", elements : es};
     }
     / '[' _ head:(e:expression ',' _ {return e;})* tail:expression ']' _ {
         head.push(tail);
         return {node : "array", elements : head};
     }
+
+empty_array = '[' _ ']' _
     
 char
     = (! ('\\' / '"' / "'")) . {
