@@ -22,6 +22,35 @@
             );
         }
     }
+
+    function built_in_type(name) {
+        return {
+            kind : "identifier",
+            qualified_id : {
+                node : "member",
+                object : {
+                    node : "identifier",
+                    name : "std"
+                },
+                member : name
+            }
+        };
+    }
+
+    function generate_template(node, template_parameters) {
+        if (template_parameters === null) {
+            return node;
+        } else {
+            var ans = {
+                node : "template",
+                name : node.name,
+                template_parameters : template_parameters,
+                content : node
+            };
+            delete node.name;
+            return ans;
+        }
+    }
 }
 
 program
@@ -47,27 +76,31 @@ class_declaration
     = "@class" _ t:( "<" _ template_parameter_list ">" _ )?
         name:identifier superclass:(":" _ type)? 
         "{" _ members:member_declaration* "}" _ { 
-            return {
-                node : "class", 
-                name : name, 
-                template_parameters : t === null ? null : t[2], 
-                superclass : superclass === null ? null : superclass[2], 
-                members:members
-            }; 
+            return generate_template(
+                {
+                    node : "class", 
+                    name : name, 
+                    superclass : superclass === null ? null : superclass[2], 
+                    members:members
+                }
+                , t === null ? null : t[2]
+            );
         }
 
 variable_declaration
     = "@var" _ t:( "<" _ template_parameter_list ">" _ )?
         name:identifier p:("(" _ parameter_list ")" _ )? type:(":" _ type)? 
         initialiser:initialiser { 
-            return {
-                node : "var", 
-                name : name, 
-                template_parameters : t === null ? null : t[2], 
-                parameters : p === null ? [] : p[2],
-                type : type === null ? null : type[2], 
-                initialiser:initialiser
-            }; 
+            return generate_template(
+                {
+                    node : "var", 
+                    name : name, 
+                    parameters : p === null ? [] : p[2],
+                    type : type === null ? null : type[2], 
+                    initialiser:initialiser
+                }
+                , t === null ? null : t[2]
+            ); 
         }
 
 member_declaration
@@ -78,7 +111,7 @@ member_declaration
         / constructor_declaration
      ) { 
          d['private'] = p !== null; 
-        return d;
+         return d;
      }
         
 class_var_declaration
@@ -86,38 +119,44 @@ class_var_declaration
         name:identifier p:("(" _ parameter_list ")" _ )? type:(":" _ type)? 
         initialiser:(initialiser / ";" _) { 
             return {
-                node : "var", 
+                node : "member", 
                 name : name, 
-                template_parameters : t === null ? null : t[2], 
+                template_parameters : t === null ? null : t[2],
                 type : type === null ? null : type[2], 
                 parameters : p === null ? [] : p[2],
                 initialiser : initialiser instanceof Array ? null : initialiser
-            }; 
+            };
         }
 
 constructor_declaration
     = "@constructor" _ t:("<" _ template_parameter_list ">" _ )? 
         p:("(" _ parameter_list ")" _ )? initialiser:initialiser {
-            return {
-                node : "constructor", 
-                template_parameters : t === null ? null : t[2], 
-                parameters : p === null ? [] : p[2],
-                initialiser : initialiser
-            }; 
+            return generate_template(
+                {
+                    node : "var", 
+                    name : "@constructor",
+                    type : null,
+                    parameters : p === null ? [] : p[2],
+                    initialiser : initialiser
+                }
+                , t === null ? null : t[2]
+            );
         }
 
 static_declaration
     = "@static" _ t:("<" _ t:template_parameter_list ">" _ )? 
         name:identifier p:("(" _ p:parameter_list ")" _ )? type:(":" _ type)? 
         initialiser:initialiser {
-            return {
-                node : "static", 
-                name : name, 
-                template_parameters : t === null ? null : t[2], 
-                type : type === null ? null : type[2], 
-                parameters : p === null ? [] : p[2],
-                initialiser : initialiser
-            }; 
+            return generate_template(
+                {
+                    node : "var", 
+                    name : name, 
+                    type : type === null ? null : type[2], 
+                    parameters : p === null ? [] : p[2],
+                    initialiser : initialiser
+                }
+                , t === null ? null : t[2] 
+            );
         }
 
 initialiser
@@ -126,6 +165,17 @@ initialiser
 
 template_parameter_list
     = head:identifier tail:("," _ identifier)* {
+        var ans = [head];
+        tail.forEach(
+            function (o) {
+                ans.push(o[2]);
+            }
+        );
+        return ans;
+    }
+
+template_arguments_list
+    = head:type tail:("," _ type)* {
         var ans = [head];
         tail.forEach(
             function (o) {
@@ -218,7 +268,7 @@ unary_expression
     }   
     
 postfix_expression
-    = head:template_expression tail:template_expression* {
+    = head:template_member_expression tail:template_member_expression* {
         function recursion(head, tail) {
             if (tail.length === 0) {
                 return head;
@@ -234,32 +284,30 @@ postfix_expression
     }
 
     
-template_expression
-    = template_application
-    / member_expression
-
-template_application
-    = t:(empty_array {return "@array";} / identifier) 
-        "<" _ a:template_parameter_list ">" _ 
+template_member_expression
+    = head:atom tail:
+        (
+            '.' _ identifier
+            / '<' _ template_arguments_list '>' _
+        )*
     {
-        return {
-            node : "template_application",
-            template : t,
-            argument : a
-        };
-    }
-
-member_expression
-    = head:(atom / template_application) tail:('.' _ atom)* {
         function recursion(head, tail) {
             if (tail.length === 0) {
                 return head;
             } else {
-                return {
-                    node : "member", 
-                    object : recursion(head, tail.slice(0, tail.length - 1)),
-                    member : tail[tail.length - 1][2]
-                };
+                if (tail[tail.length - 1][0] === '.') {
+                    return {
+                        node : "member", 
+                        object : recursion(head, tail.slice(0, tail.length - 1)),
+                        member : tail[tail.length - 1][2]
+                    };
+                } else {
+                    return {
+                        node : "template_application",
+                        template : recursion(head, tail.slice(0, tail.length - 1)),
+                        arguments : tail[tail.length - 1][2]
+                    };
+                }
             }
         }
         return recursion(head, tail);
@@ -296,26 +344,52 @@ function_expression
     }
     
 qualified_identifier
-    = head:(("." _)? identifier) tail:("." _ identifier)* {
-        var ans = [head[1]];
+    = head:(
+        ("." _)? (
+            i:identifier {return {source : "internal", path : [i]};}
+            / s:string_literal {return {source : "external", path : [s.value]};}
+        )
+    ) tail:("." _ identifier)+ {
+        var ans = head[1];
         tail.forEach(
             function (o) {
-                ans.push(o[2]);
+                ans.path.push(o[2]);
             }
         );
         return ans;
     }
 
 identifier
-    = [_a-zA-Z\xA0-\uFFFF][_a-zA-Z0-9\xA0-\uFFFF]* _ {
+    = ('@this' / [_a-zA-Z\xA0-\uFFFF][_a-zA-Z0-9\xA0-\uFFFF]*) _ {
         return text().trim();
     }
-
-type
-    = template_application
-    / i:identifier {
-        return {node : "identifier", name : i};
+    / '@operator' _ op:('!' / '~' / '+' / '-' / '++' / '*' / '/' / '%' / '<<' / '>>'
+        / '&' / '^' / '|' / '&&' / '||' / '==' / '!=' / '<' / '<=' / '>' / '>=') _ {
+        return op;
     }
+
+type = s:(
+    m:template_member_expression {
+        return {kind : "identifier", qualified_id : m};
+    }
+    / '[' _ t:type ']' _ {
+            return {kind : "array", array : t};
+    }
+    / '(' _ t:type ')' _ { return t; }
+)+ {
+    function recursion(s) {
+        if (s.length === 1) {
+            return s[0];
+        } else {
+            return {
+                kind : "function", 
+                parameter : s[0], 
+                return : recursion(s.slice(1))
+            };
+        }
+    }
+    return recursion(s);
+}
 
 literal
     = string_literal
@@ -327,12 +401,16 @@ literal
 char_literal
     = "'" c:(char / '"') "'" _
         {
-            return {node : "literal", type : "Character", value : c};
+            return {
+                node : "literal", 
+                type : built_in_type("Character"), 
+                value : c
+            };
         }
 
 string_literal
     = "\"" c:(char / "'")* "\"" _ {
-        return {node : "literal", type : "String", value : c.join('')};
+        return {node : "literal", type : built_in_type("String"), value : c.join('')};
     }
 
 float_literal
@@ -340,19 +418,16 @@ float_literal
         ([0-9]+ "." [0-9]* / "." [0-9]+) ([eE] [+-]? [0-9]+)? 
         / [0-9]+_ [eE] [+-]? [0-9]+
     ) {
-        return {node : "literal", type : "Float", value : parseFloat(text())};
+        return {node : "literal", type : built_in_type("Float"), value : parseFloat(text())};
     }
     
 int_literal
     = ("0x"[0-9a-fA-F]+ / [0-9]+ ) _ {
-        return {node : "literal", type : "Integer", value : parseInt(text())};
+        return {node : "literal", type : built_in_type("Integer"), value : parseInt(text())};
     }
 
 array_literal
-    = empty_array {
-        return {node : "array", elements : []};
-    }
-    / '[' _ es:(e:expression ',' _ {return e;})+ ']' _ {
+    = '[' _ es:(e:expression ',' _ {return e;})* ']' _ {
         return {node : "array", elements : es};
     }
     / '[' _ head:(e:expression ',' _ {return e;})* tail:expression ']' _ {
@@ -360,8 +435,6 @@ array_literal
         return {node : "array", elements : head};
     }
 
-empty_array = '[' _ ']' _
-    
 char
     = (! ('\\' / '"' / "'")) . {
         return text();

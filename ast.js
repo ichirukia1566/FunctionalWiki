@@ -2,48 +2,248 @@ var natives = {
     if : function (symbols) {
         return symbols.cond.value ? symbols.then.value : symbols.else.value;
     },
+    plus : function (symbols) {
+        return symbols['@this'].value + symbols.rhs.value;
+    },
+    minus : function (symbols) {
+        return symbols['@this'].value - symbols.rhs.value;
+    },
+    times : function (symbols) {
+        return symbols['@this'].value * symbols.rhs.value;
+    }
 };
 
-Array.prototype.clone = function() {
-    return this.slice();
-};
-
-/** Check if the types are the same
- * @param x
- * @param y
- * @return bool
+/** Make a copy of the symbol table to be stored in closures
+ * @param symbols
+ * @return object
  */
-function type_equals(x, y) {
-    // TODO
+function copy_symbols(symbols) {
+    var copy = {};
+    for (var name in symbols) {
+        if (symbols.hasOwnProperty(name)) {
+            copy[name] = symbols[name];
+        }
+    }
+    return copy;
 }
 
-/** Parse an AST node 
- * @param node
- * @param check_only Do type check only without evaluating
- * @return object A value node
+function resolve_type(type, symbols) {
+    if (type.kind === "identifier") {
+        var class_value = parse(type.qualified_id, symbols, true).value;
+        return {
+            kind : "object",
+            class : class_value
+        };
+    } else {
+        return type;
+    }
+}
+
+/** Check if the types are compatible
+ * @param declared
+ * @param actual
+ * @return bool
  */
-function parse(node, symbols, check_only) {
-    var parser = {
-        program : function () {
+function compatible(declared, actual, symbols) {
+    declared = resolve_type(declared, symbols);
+    actual = resolve_type(actual, symbols);
+    if (declared.kind !== actual.kind) {
+        return false;
+    }
+    var comparator = {
+        array : function () {
+            return compatible(declared.elements, declared.elements, symbols);
+        },
+        function : function() {
+            return compatible(declared.return, actual.return) 
+                && compatible(actual.parameter, declared.parameter);
+        },
+        template : function () {
+            error("A template is not a type");
+        },
+        object : function () {
+            for (var member in declared.value) {
+                if (actual.value[member] === undefined) {
+                    return false;
+                }
+                if (!compatible(declared.value[member], actual.value[member])) {
+                    return false;
+                }
+            }
+            return true;
+        },
+    }
+}
+
+function use_constructor(class_obj)
+    var constructor = class_obj.value['@constructor'];
+    if (constructor === undefined) {
+        error("Cannot use a class without a constructor as a value");
+    }
+}
+
+/** Add a symbol into the symbol table
+ */
+function declare(node, symbols) {
+    var method = {
+        import : function () { 
             // TODO
         },
-        import : function () {
-            // TODO
+        template : function () {
+            symbols[node.name] = {
+                type : {
+                    kind : "template"
+                },
+                template_parameters : node.template_parameters,
+                content : node.content
+            };
         },
         class : function () {
-            // TODO
+            symbols[node.name] = {
+                type : {
+                    kind : "class",
+                    superclass : resolve_type(node.superclass, symbols)
+                },
+            };
+            symbols[node.name] = evaluate(node, symbols, true);
         },
         var : function () {
-            // TODO
+            // add myself to symbol table to support recursion
+            // Return type must be specified for recursion
+            if (node.type !== null) {
+                symbols[node.name] = {type : node.type};
+            }
+            // TODO: mutual recursion
+
+            // translate the declaration into a function expression
+            var initialiser = parse(
+                {
+                    node : "function",
+                    parameters : node.parameters,
+                    type : node.type,
+                    body : node.initialiser
+                }
+                , symbols
+                , check_only
+            );
+            if (initialiser.type.kind === 'class') {
+                symbols[node.name] = use_constructor(initialiser);
+            }
+            symbols[node.name] = initialiser;
         },
-        constructor : function () {
-            // TODO
+    }
+    method[node.node]();
+}
+
+/** Evaluate an AST node 
+ * @param node
+ * @return object A value node
+ */
+function evaluate(node, symbols, check_only) {
+    var evaluater = {
+        program : function () {
+            node.imports.forEach(
+                function (child) {
+                    declare(child, symbols);
+                }
+            );
+            node.declarations.forEach(
+                function (child) {
+                    declare(child, symbols);
+                }
+            );
+            return evaluate(node.expression, symbols, check_only);
         },
-        static : function () {
-            // TODO
+        class : function () {
+            var ans = {
+                type : {
+                    kind : "class",
+                },
+                value : {
+                    superclass : resolve_type(node.superclass, symbols),
+                    static_members : {}, // store the value directly
+                    members : {} // store the AST
+                }
+            };
+            var class_symbols = copy_symbols(symbols);
+            ans.value.forEach(
+                function (m) {
+                    // static members
+                    if (m.node !== 'member') {
+                        declare(m, class_symbols);
+                        ans.value.static_members[m.name] = class_symbols[m.name];
+                    }
+                }
+            );
+            ans.value.forEach(
+                function (m) {
+                    if (m.node === 'member') {
+                        // directly store the AST, only check at point of usage
+                        ans.type.members[m.name] = m;
+                    }
+                }
+            );
+            return ans;
+        },
+        template_application : function () {
+            // resolve template arguments
+            var template = evaluate(node.template, symbols, true);
+            var args = node.arguments.map(
+                function (a) {
+                    var ans = evaluate(a, symbols, true);
+                    if (ans.type.kind !== "class") {
+                        error("Template argument does not resolve to a type");
+                    }
+                }
+            );
+            // put the template arguments into the parameters
+            if (template.type.kind !== "template") {
+                if (template.type.kind === "array" && template.value.elements.length === 0) {
+                    // empty array
+                    if (node.arguments.length !== 1) {
+                        error("Exactly 1 type must be specified as the template argument of an empty array");
+                    }
+                    return {
+                        type : {
+                            kind : "array",
+                            elements : node.arguments[0]
+                        },
+                        value : []
+                    };
+                } else {
+                    error("Cannot apply template arguments into a non-template");
+                }
+            }
+            if (template.template_parameters.length === node.arguments.length) {
+                var template_symbols = copy_symbols(symbols);
+                for (var i = 0; i < args.length; ++i) {
+                    template_symbols[template.template_parameters[i]] = args[i];
+                }
+                return evaluate(template.content, template_symbols, check_only);
+            }
         },
         member : function () {
-            // TODO
+            var object = parse(node.object, symbols, check_only);
+            var type = resolve_type(object.type, symbols);
+            switch (type.kind) {
+                case "class":
+                    if (object.value.static_members[node.member] === undefined) {
+                        error("Member not found in class");
+                    }
+                    return object.value.static_members[node.member];
+                case "array":
+                    if (node.member === "length") {
+                        return {
+                            type : {
+                                kind : "Integer"
+                            },
+                            value : object.value.length
+                        };
+                    }
+                    // fallthrough
+                default:
+                    error("Accessing members of non-class type is not yet supported");
+            }
         },
         native : function () {
             return {
@@ -52,10 +252,13 @@ function parse(node, symbols, check_only) {
             };
         }
         call : function () {
-            var lhs = parse(node.function, symbols, check_only);
-            if (lhs.type[0] === '@array') {
-                var rhs = parse(node.argument, symbols, check_only);
-                if (!type_equals(['std', 'Integer'], rhs.type)) {
+            // evaluate the arguments
+            var lhs = evaluate(node.function, symbols, check_only);
+            var rhs = evaluate(node.argument, symbols, check_only);
+
+            // call the function
+            if (resolve_type(lhs.type[0], symbols).kind === 'array') {
+                if (!compatible(built_in_type('Integer'), rhs.type)) {
                     error("Array index must be an integer");
                 }
                 if (check_only) {
@@ -67,26 +270,24 @@ function parse(node, symbols, check_only) {
                         error("Array index overflow");
                     }
                 }
-            } else if (lhs.type[0] === '@function') {
-                var rhs = parse(node.argument, symbols, check_only);
-                if (!type_equals(lhs.type[1], rhs.type)) {
+            } else if (resolve_type(lhs.type[0], symbols).kind === 'function') {
+                if (!compatible(lhs.type[1], rhs.type)) {
                     error("Argument type does not match parameter type");
                 }
                 if (check_only) {
                     return {type : lhs.type[2]};
                 } else {
-                    var closure_symbols = lhs.value.symbols.clone();
+                    var closure_symbols = copy_symbols(lhs.value.symbols);
                     var param = lhs.value.parameters[0];
                     var remaining_params = lhs.value.parameters.slice(1);
                     closure_symbols[param.name] = {param.type, rhs.value};
                     if (remaining_params.length === 0) {
                         return {
                             type : lhs.type[2],
-                            value : parse(
-                                    lhs.value.body
-                                    , closure_symbols
-                                    , check_only
-                                ).value,
+                            value : evaluate(
+                                lhs.value.body
+                                , closure_symbols
+                            ).value,
                         };
                     } else {
                         return {
@@ -99,51 +300,60 @@ function parse(node, symbols, check_only) {
                         };
                     }
                 }
-            } else if (lhs.type[0] === '@template') {
-                // TODO
+            } else if (resolve_type(lhs.type[0], symbols).kind === 'template') {
+                var template_application = {
+                    node : "template_application",
             } else {
                 error("Cannot call a value other than a function or an array");
             }
-        },
-        template_application : function () {
-            // TODO
         },
         identifier : function () {
             if (symbols[node.name] === undefined) {
                 error("Cannot resolve symbol " + node.name);
             }
+            /*
+            if (symbols[node.name].type.kind === 'class') {
+                return symbols[node.name].value['@constructor'];
+            }
+            */
             return symbols[node.name];
         },
         function : function () {
-            var closure_symbols = symbols.clone();
+            var closure_symbols = copy_symbols(symbols);
             parameters.forEach(
                 function (p) {
                     closure_symbols[p.name] = {type : p.type, value : undefined};
                 }
             );
-            var body_type = parse(node.body, closure_symbols, true);
-            if (node.type === null && !type_equals(node.type, body_type)) {
+            var body_type = evaluate(node.body, closure_symbols, true);
+            if (node.type === null && !compatible(node.type, body_type)) {
                 error("Type of function body does not match declared type");
             }
             var return_type = node_type === null ? body_type : node_type;
             if (parameters.length === 0) {
                 return {
                     type : return_type,
-                    value : check_only 
-                        ? undefined
-                        : parse(node.body, symbols, check_only).value
+                    value : evaluate(node.body, symbols).value
                 };
             } else {
                 var generate_type = function (parameters) {
                     if (parameters.length === 1) {
                         return {
-                            type : ['@function', parameters[0].type, return_type]
+                            type : {
+                                kind : 'function', 
+                                parameter : parameters[0].type, 
+                                return : return_type
+                            }
                         };
                     } else {
                         var param = parameters.shift();
                         var child = generate_type(parameters);
                         return {
-                            type : ['@function', parameters[0].type, child.type]
+                            type : {
+                                kind : 'function', 
+                                parameter : parameters[0].type, 
+                                return : child.type
+                            }
                         };
                     }
                 };
@@ -158,35 +368,35 @@ function parse(node, symbols, check_only) {
             }
         },
         array : function () {
-            if (node.elements.length === 0) {
-                return {
-                    type : ['@template', ['T'], ['@array', 'T']],
-                    value : []
-                };
-            } else {
-                var type = parse(node.elements[0], symbols, true).type;
-                for (var i = 1; i < node.elements.length; ++i) {
-                    if (
-                        !type_equals(
-                            type
-                            , parse(node.elements[i], symbols, true).type
-                        )
-                    ) {
-                        error("Array literal contains inconsistent types");
-                    }
-                }
-                return {
-                    type : ['@array', type], 
-                    value : check_only ? undefined : node.map(
-                        function (e) {
-                            return parse(e, symbols).value;
-                        }
+            // do not support empty array due to type ambiguity
+            // empty array literal must be used in form of template application
+            var type = node.elements.length ? evaluate(node.elements[0], symbols).type : undefined;
+            for (var i = 1; i < node.elements.length; ++i) {
+                if (
+                    !compatible(
+                        type
+                        , evaluate(node.elements[i], symbols).type
                     )
-                };
+                ) {
+                    error("Array literal contains inconsistent types");
+                }
+            }
+            return {
+                type : {
+                    kind : "array",
+                    elements : type
+                },
+                value : node.map(
+                    function (e) {
+                        return evaluate(e, symbols).value;
+                    }
+                )
+            };
         },
         literal : function () {
-            return {type : ['std', node.type], value : node.value};
+            return {type : node.type, value : node.value};
         }
     };
-    return parser[node.type]();
+    var ans = evaluater[node.type]();
+    return ans;
 }
