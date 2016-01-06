@@ -173,7 +173,7 @@ function use_constructor(class_obj) {
 
 /** Add a symbol into the symbol table
  */
-function declare(node, symbols) {
+function declare(node, symbols, check_only) {
     var method = {
         import : function () { 
             error("Not implemented");
@@ -233,12 +233,12 @@ function evaluate(node, symbols, check_only) {
         program : function () {
             node.imports.forEach(
                 function (child) {
-                    declare(child, symbols);
+                    declare(child, symbols, check_only);
                 }
             );
             node.declarations.forEach(
                 function (child) {
-                    declare(child, symbols);
+                    declare(child, symbols, check_only);
                 }
             );
             return evaluate(node.expression, symbols, check_only);
@@ -259,7 +259,7 @@ function evaluate(node, symbols, check_only) {
                 function (m) {
                     // static members
                     if (m.node !== 'member') {
-                        declare(m, class_symbols);
+                        declare(m, class_symbols, check_only);
                         ans.value.static_members[m.name] = class_symbols[m.name];
                     }
                 }
@@ -416,16 +416,17 @@ function evaluate(node, symbols, check_only) {
         },
         function : function () {
             var closure_symbols = copy_symbols(symbols);
+            var parameters = node.parameters;
             parameters.forEach(
                 function (p) {
                     closure_symbols[p.name] = {type : p.type, value : undefined};
                 }
             );
-            var body_type = evaluate(node.body, closure_symbols, true);
-            if (node.type === null && !compatible(node.type, body_type)) {
+            var body_type = evaluate(node.body, closure_symbols, true).type;
+            if (node.type !== null && !compatible(node.type, body_type)) {
                 error("Type of function body does not match declared type");
             }
-            var return_type = node_type === null ? body_type : node_type;
+            var return_type = node.type === null ? body_type : node.type;
             if (parameters.length === 0) {
                 return {
                     type : return_type,
