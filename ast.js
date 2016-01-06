@@ -1,3 +1,10 @@
+    function built_in_type(name) {
+        return {
+            kind : "native",
+            built_in : name
+        };
+    }
+
 var natives = {
     if : function (symbols) {
         return symbols.cond.value ? symbols.then.value : symbols.else.value;
@@ -10,8 +17,85 @@ var natives = {
     },
     times : function (symbols) {
         return symbols['@this'].value * symbols.rhs.value;
+    },
+    Integer : {
+        '+' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Integer"),
+                return : built_in_type("Integer"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Integer"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "plus",
+                    type : built_in_type("Integer")
+                },
+                symbols : {}
+            }
+        },
+        '-' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Integer"),
+                return : built_in_type("Integer"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Integer"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "minus",
+                    type : built_in_type("Integer")
+                },
+                symbols : {}
+            }
+        },
+        '*' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Integer"),
+                return : built_in_type("Integer"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Integer"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "times",
+                    type : built_in_type("Integer")
+                },
+                symbols : {}
+            }
+        },
     }
 };
+
+function InterpreterError() {
+    Error.apply(this, arguments);
+    this.name = "InterpreterError";
+}
+InterpreterError.prototype = Object.create(Error.prototype);
+
+function error(message) {
+    alert(message);
+    throw new InterpreterError(message);
+}
+
 
 /** Make a copy of the symbol table to be stored in closures
  * @param symbols
@@ -29,7 +113,7 @@ function copy_symbols(symbols) {
 
 function resolve_type(type, symbols) {
     if (type.kind === "identifier") {
-        var class_value = parse(type.qualified_id, symbols, true).value;
+        var class_value = evaluate(type.qualified_id, symbols, true).value;
         return {
             kind : "object",
             class : class_value
@@ -62,6 +146,7 @@ function compatible(declared, actual, symbols) {
             error("A template is not a type");
         },
         object : function () {
+            // TODO: possibility of infinite recursion
             for (var member in declared.value) {
                 if (actual.value[member] === undefined) {
                     return false;
@@ -72,10 +157,14 @@ function compatible(declared, actual, symbols) {
             }
             return true;
         },
-    }
+        native : function () {
+            return declared.built_in === actual.built_in;
+        }
+    };
+    return comparator[declared.kind]();
 }
 
-function use_constructor(class_obj)
+function use_constructor(class_obj) {
     var constructor = class_obj.value['@constructor'];
     if (constructor === undefined) {
         error("Cannot use a class without a constructor as a value");
@@ -87,7 +176,7 @@ function use_constructor(class_obj)
 function declare(node, symbols) {
     var method = {
         import : function () { 
-            // TODO
+            error("Not implemented");
         },
         template : function () {
             symbols[node.name] = {
@@ -116,7 +205,7 @@ function declare(node, symbols) {
             // TODO: mutual recursion
 
             // translate the declaration into a function expression
-            var initialiser = parse(
+            var initialiser = evaluate(
                 {
                     node : "function",
                     parameters : node.parameters,
@@ -220,17 +309,24 @@ function evaluate(node, symbols, check_only) {
                     template_symbols[template.template_parameters[i]] = args[i];
                 }
                 return evaluate(template.content, template_symbols, check_only);
+            } else {
+                error("Partial template application is not yet implemented");
             }
         },
         member : function () {
-            var object = parse(node.object, symbols, check_only);
+            var object = evaluate(node.object, symbols, check_only);
             var type = resolve_type(object.type, symbols);
             switch (type.kind) {
                 case "class":
-                    if (object.value.static_members[node.member] === undefined) {
-                        error("Member not found in class");
+                    error("Not implemented");
+                case "native": {
+                    var ans = natives[type.built_in][node.member];
+                    if (ans === undefined) {
+                        error("Member does not exist in this built-in type");
                     }
-                    return object.value.static_members[node.member];
+                    ans.value.symbols['@this'] = object;
+                    return ans;
+                }
                 case "array":
                     if (node.member === "length") {
                         return {
@@ -242,7 +338,7 @@ function evaluate(node, symbols, check_only) {
                     }
                     // fallthrough
                 default:
-                    error("Accessing members of non-class type is not yet supported");
+                    error("Not implemented");
             }
         },
         native : function () {
@@ -250,14 +346,15 @@ function evaluate(node, symbols, check_only) {
                 type : node.type,
                 value : check_only ? undefined : natives[node.native](symbols)
             };
-        }
+        },
         call : function () {
             // evaluate the arguments
             var lhs = evaluate(node.function, symbols, check_only);
             var rhs = evaluate(node.argument, symbols, check_only);
 
             // call the function
-            if (resolve_type(lhs.type[0], symbols).kind === 'array') {
+            var type = resolve_type(lhs.type, symbols);
+            if (type.kind === 'array') {
                 if (!compatible(built_in_type('Integer'), rhs.type)) {
                     error("Array index must be an integer");
                 }
@@ -270,20 +367,20 @@ function evaluate(node, symbols, check_only) {
                         error("Array index overflow");
                     }
                 }
-            } else if (resolve_type(lhs.type[0], symbols).kind === 'function') {
-                if (!compatible(lhs.type[1], rhs.type)) {
+            } else if (type.kind === 'function') {
+                if (!compatible(type.parameter, rhs.type)) {
                     error("Argument type does not match parameter type");
                 }
                 if (check_only) {
-                    return {type : lhs.type[2]};
+                    return {type : type.return};
                 } else {
                     var closure_symbols = copy_symbols(lhs.value.symbols);
                     var param = lhs.value.parameters[0];
                     var remaining_params = lhs.value.parameters.slice(1);
-                    closure_symbols[param.name] = {param.type, rhs.value};
+                    closure_symbols[param.name] = {type : param.type, value : rhs.value};
                     if (remaining_params.length === 0) {
                         return {
-                            type : lhs.type[2],
+                            type : type.return,
                             value : evaluate(
                                 lhs.value.body
                                 , closure_symbols
@@ -291,7 +388,7 @@ function evaluate(node, symbols, check_only) {
                         };
                     } else {
                         return {
-                            type : lhs.type[2],
+                            type : type.return,
                             value : {
                                 parameters : remaining_params,
                                 body : lhs.value.body,
@@ -300,9 +397,8 @@ function evaluate(node, symbols, check_only) {
                         };
                     }
                 }
-            } else if (resolve_type(lhs.type[0], symbols).kind === 'template') {
-                var template_application = {
-                    node : "template_application",
+            } else if (resolve_type(lhs.type, symbols).kind === 'template') {
+                error("Template argument deduction is not yet implemented");
             } else {
                 error("Cannot call a value other than a function or an array");
             }
@@ -397,6 +493,6 @@ function evaluate(node, symbols, check_only) {
             return {type : node.type, value : node.value};
         }
     };
-    var ans = evaluater[node.type]();
+    var ans = evaluater[node.node]();
     return ans;
 }

@@ -23,20 +23,6 @@
         }
     }
 
-    function built_in_type(name) {
-        return {
-            kind : "identifier",
-            qualified_id : {
-                node : "member",
-                object : {
-                    node : "identifier",
-                    name : "std"
-                },
-                member : name
-            }
-        };
-    }
-
     function generate_template(node, template_parameters) {
         if (template_parameters === null) {
             return node;
