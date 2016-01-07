@@ -1,4 +1,4 @@
-    function built_in_type(name) {
+function built_in_type(name) {
         return {
             kind : "native",
             built_in : name
@@ -136,7 +136,9 @@ function compatible(declared, actual, symbols) {
     }
     var comparator = {
         array : function () {
-            return compatible(declared.elements, declared.elements, symbols);
+            return compatible(declared.elements, actual.elements, symbols);
+            // is the original line (below) a typo?
+            //return compatible(declared.elements, declared.elements, symbols);
         },
         function : function() {
             return compatible(declared.return, actual.return) 
