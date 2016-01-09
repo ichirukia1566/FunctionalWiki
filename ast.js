@@ -18,6 +18,9 @@ var natives = {
     times : function (symbols) {
         return symbols['@this'].value * symbols.rhs.value;
     },
+    divide : function (symbols) {
+        return symbols['@this'].value / symbols.rhs.value;
+    },
     Integer : {
         '+' : {
             type : {
@@ -78,6 +81,113 @@ var natives = {
                     node : "native",
                     native : "times",
                     type : built_in_type("Integer")
+                },
+                symbols : {}
+            }
+        },
+        '/' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Integer"),
+                return : built_in_type("Integer"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Integer"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "divide",
+                    type : built_in_type("Integer")
+                },
+                symbols : {}
+            }
+        },
+    },
+    Float : {
+        '+' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Float"),
+                return : built_in_type("Float"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Float"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "plus",
+                    type : built_in_type("Float"),
+                },
+                symbols : {}
+            }
+        },
+        '-' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Float"),
+                return : built_in_type("Float"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Float"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "minus",
+                    type : built_in_type("Float"),
+                },
+                symbols : {}
+            }
+        },
+        '*' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Float"),
+                return : built_in_type("Float"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Float"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "times",
+                    type : built_in_type("Float"),
+                },
+                symbols : {}
+            }
+        },
+        '/' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Float"),
+                return : built_in_type("Float"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Float"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "divide",
+                    type : built_in_type("Float"),
                 },
                 symbols : {}
             }
