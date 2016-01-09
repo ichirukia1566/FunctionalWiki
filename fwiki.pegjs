@@ -403,7 +403,7 @@ float_literal
     = (
         ([0-9]+ "." [0-9]* / "." [0-9]+) ([eE] [+-]? [0-9]+)? 
         / [0-9]+_ [eE] [+-]? [0-9]+
-    ) {
+    ) _ {
         return {node : "literal", type : built_in_type("Float"), value : parseFloat(text())};
     }
     
