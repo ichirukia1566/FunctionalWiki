@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 "use strict";
 
 function built_in_type(name) {
@@ -6,6 +7,204 @@ function built_in_type(name) {
         built_in : name
     };
 }
+=======
+function built_in_type(name) {
+        return {
+            kind : "native",
+            built_in : name
+        };
+    }
+
+var natives = {
+    if : function (symbols) {
+        return symbols.cond.value ? symbols.then.value : symbols.else.value;
+    },
+    plus : function (symbols) {
+        return symbols['@this'].value + symbols.rhs.value;
+    },
+    minus : function (symbols) {
+        return symbols['@this'].value - symbols.rhs.value;
+    },
+    times : function (symbols) {
+        return symbols['@this'].value * symbols.rhs.value;
+    },
+    divide : function (symbols) {
+        return symbols['@this'].value / symbols.rhs.value;
+    },
+    Integer : {
+        '+' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Integer"),
+                return : built_in_type("Integer"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Integer"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "plus",
+                    type : built_in_type("Integer")
+                },
+                symbols : {}
+            }
+        },
+        '-' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Integer"),
+                return : built_in_type("Integer"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Integer"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "minus",
+                    type : built_in_type("Integer")
+                },
+                symbols : {}
+            }
+        },
+        '*' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Integer"),
+                return : built_in_type("Integer"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Integer"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "times",
+                    type : built_in_type("Integer")
+                },
+                symbols : {}
+            }
+        },
+        '/' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Integer"),
+                return : built_in_type("Integer"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Integer"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "divide",
+                    type : built_in_type("Integer")
+                },
+                symbols : {}
+            }
+        },
+    },
+    Float : {
+        '+' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Float"),
+                return : built_in_type("Float"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Float"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "plus",
+                    type : built_in_type("Float"),
+                },
+                symbols : {}
+            }
+        },
+        '-' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Float"),
+                return : built_in_type("Float"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Float"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "minus",
+                    type : built_in_type("Float"),
+                },
+                symbols : {}
+            }
+        },
+        '*' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Float"),
+                return : built_in_type("Float"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Float"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "times",
+                    type : built_in_type("Float"),
+                },
+                symbols : {}
+            }
+        },
+        '/' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Float"),
+                return : built_in_type("Float"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Float"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "divide",
+                    type : built_in_type("Float"),
+                },
+                symbols : {}
+            }
+        },
+    }
+};
+>>>>>>> 893381e61992ac9c10c2a7035a3f9e7c5fcf4164
 
 function InterpreterError() {
     Error.apply(this, arguments);
@@ -81,7 +280,9 @@ function compatible(declared, actual, symbols) {
     }
     var comparator = {
         array : function () {
-            return compatible(declared.elements, declared.elements, symbols);
+            return compatible(declared.elements, actual.elements, symbols);
+            // is the original line (below) a typo?
+            //return compatible(declared.elements, declared.elements, symbols);
         },
         function : function() {
             return compatible(declared.return, actual.return, symbols) 
