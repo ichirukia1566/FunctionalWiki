@@ -5,10 +5,14 @@
     <title>Test</title>
     <script src="ast.js"/>
     <script src="fwiki.js"/>
+    <script src="natives.js"/>
     <script src="index.js"/>
   </head>
   <body>
-    <textarea id="code" cols="80" rows="25">1 * (2 + 3)</textarea>
+    <textarea id="code" cols="80" rows="25"><![CDATA[@var<T> if(cond : @Boolean, then : T, else : T) : T = @native(if : T);
+@var true = @native(true : @Boolean);
+@var false = @native(false : @Boolean);
+]]></textarea>
     <br/>
     <textarea readonly="readonly" id="output" cols = "80" rows="25"/>
     <br/>

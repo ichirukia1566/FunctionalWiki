@@ -163,10 +163,13 @@ template_parameter_list
 template_arguments_list
     = head:type tail:("," _ type)* {
         var ans = [head];
-        tail.forEach(
-            function (o) {
-                ans.push(o[2]);
-            }
+        Array.prototype.push.apply(
+            ans,
+            tail.map(
+                function (o) {
+                    return o[2];
+                }
+            )
         );
         return ans;
     }
@@ -174,13 +177,17 @@ template_arguments_list
 parameter_list
     = head:parameter tail:("," _ parameter)* {
         var ans = [head];
-        tail.forEach(
-            function (o) {
-                ans.push(o[2]);
-            }
+        Array.prototype.push.apply(
+            ans
+            , tail.map(
+                function (o) {
+                    return o[2];
+                }
+            )
         );
         return ans;
     }
+    / "" { return []; }
         
 parameter
     = name:identifier ":" _ type:type {
@@ -301,14 +308,25 @@ template_member_expression
 
 atom
     = literal
+    / "@this" _ {
+        return {node : "this"};
+    }
     / i:identifier {
         return {node : "identifier", name : i};
+    }
+    / t:built_in_type {
+        return {node : "built_in_type", type : t};
     }
     / '(' _ e:expression ')' _ {
         return e;
     }
     / function_expression
     / native_expression
+
+built_in_type
+    = t:("@Character" / "@Integer" / "@Float" / "@Boolean") _ {
+        return built_in_type(t.substr(1));
+    }
 
 native_expression
     = '@native' _ '(' _ i:identifier ':' _ t:type ')' _ {
@@ -346,7 +364,7 @@ qualified_identifier
     }
 
 identifier
-    = ('@this' / [_a-zA-Z\xA0-\uFFFF][_a-zA-Z0-9\xA0-\uFFFF]*) _ {
+    = [_a-zA-Z\xA0-\uFFFF][_a-zA-Z0-9\xA0-\uFFFF]* _ {
         return text().trim();
     }
     / '@operator' _ op:('!' / '~' / '+' / '-' / '++' / '*' / '/' / '%' / '<<' / '>>'
@@ -355,7 +373,8 @@ identifier
     }
 
 type = s:(
-    m:template_member_expression {
+    built_in_type
+    / m:template_member_expression {
         return {kind : "identifier", qualified_id : m};
     }
     / '[' _ t:type ']' _ {
@@ -403,7 +422,7 @@ float_literal
     = (
         ([0-9]+ "." [0-9]* / "." [0-9]+) ([eE] [+-]? [0-9]+)? 
         / [0-9]+_ [eE] [+-]? [0-9]+
-    ) {
+    ) _ {
         return {node : "literal", type : built_in_type("Float"), value : parseFloat(text())};
     }
     

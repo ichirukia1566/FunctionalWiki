@@ -1,89 +1,11 @@
-    function built_in_type(name) {
-        return {
-            kind : "native",
-            built_in : name
-        };
-    }
+"use strict";
 
-var natives = {
-    if : function (symbols) {
-        return symbols.cond.value ? symbols.then.value : symbols.else.value;
-    },
-    plus : function (symbols) {
-        return symbols['@this'].value + symbols.rhs.value;
-    },
-    minus : function (symbols) {
-        return symbols['@this'].value - symbols.rhs.value;
-    },
-    times : function (symbols) {
-        return symbols['@this'].value * symbols.rhs.value;
-    },
-    Integer : {
-        '+' : {
-            type : {
-                kind : "function",
-                parameter : built_in_type("Integer"),
-                return : built_in_type("Integer"),
-            },
-            value : {
-                parameters : [
-                    {
-                        name : "rhs",
-                        type : built_in_type("Integer"),
-                    },
-                ],
-                body : {
-                    node : "native",
-                    native : "plus",
-                    type : built_in_type("Integer")
-                },
-                symbols : {}
-            }
-        },
-        '-' : {
-            type : {
-                kind : "function",
-                parameter : built_in_type("Integer"),
-                return : built_in_type("Integer"),
-            },
-            value : {
-                parameters : [
-                    {
-                        name : "rhs",
-                        type : built_in_type("Integer"),
-                    },
-                ],
-                body : {
-                    node : "native",
-                    native : "minus",
-                    type : built_in_type("Integer")
-                },
-                symbols : {}
-            }
-        },
-        '*' : {
-            type : {
-                kind : "function",
-                parameter : built_in_type("Integer"),
-                return : built_in_type("Integer"),
-            },
-            value : {
-                parameters : [
-                    {
-                        name : "rhs",
-                        type : built_in_type("Integer"),
-                    },
-                ],
-                body : {
-                    node : "native",
-                    native : "times",
-                    type : built_in_type("Integer")
-                },
-                symbols : {}
-            }
-        },
-    }
-};
+function built_in_type(name) {
+    return {
+        kind : "native",
+        built_in : name
+    };
+}
 
 function InterpreterError() {
     Error.apply(this, arguments);
@@ -96,6 +18,23 @@ function error(message) {
     throw new InterpreterError(message);
 }
 
+function generate_function_type(parameters, return_type, symbols) {
+    parameters = parameters.slice();
+    if (parameters.length === 1) {
+        return {
+            kind : 'function', 
+            parameter : resolve_type(parameters[0].type, symbols), 
+            return : return_type
+        };
+    } else {
+        var param = parameters.shift();
+        return {
+            kind : 'function', 
+            parameter : resolve_type(param.type, symbols), 
+            return : generate_function_type(parameters, return_type, symbols)
+        };
+    }
+};
 
 /** Make a copy of the symbol table to be stored in closures
  * @param symbols
@@ -113,11 +52,17 @@ function copy_symbols(symbols) {
 
 function resolve_type(type, symbols) {
     if (type.kind === "identifier") {
-        var class_value = evaluate(type.qualified_id, symbols, true).value;
-        return {
-            kind : "object",
-            class : class_value
-        };
+        var class_ = evaluate(type.qualified_id, symbols, true);
+        if (class_.type.kind === 'class') {
+            return {
+                kind : "object",
+                class : class_.value
+            };
+        } else if (class_.type.kind === 'type') {
+            return  class_.value;
+        } else {
+            error("Symbol resolves to non-type in a type context");
+        }
     } else {
         return type;
     }
@@ -139,8 +84,8 @@ function compatible(declared, actual, symbols) {
             return compatible(declared.elements, declared.elements, symbols);
         },
         function : function() {
-            return compatible(declared.return, actual.return) 
-                && compatible(actual.parameter, declared.parameter);
+            return compatible(declared.return, actual.return, symbols) 
+                && compatible(actual.parameter, declared.parameter, symbols);
         },
         template : function () {
             error("A template is not a type");
@@ -151,7 +96,7 @@ function compatible(declared, actual, symbols) {
                 if (actual.value[member] === undefined) {
                     return false;
                 }
-                if (!compatible(declared.value[member], actual.value[member])) {
+                if (!compatible(declared.value[member], actual.value[member], symbols)) {
                     return false;
                 }
             }
@@ -200,25 +145,12 @@ function declare(node, symbols, check_only) {
             // add myself to symbol table to support recursion
             // Return type must be specified for recursion
             if (node.type !== null) {
-                symbols[node.name] = {type : node.type};
+                symbols[node.name] = {type : generate_function_type(node.parameters, resolve_type(node.type, symbols), symbols)};
             }
             // TODO: mutual recursion
 
             // translate the declaration into a function expression
-            var initialiser = evaluate(
-                {
-                    node : "function",
-                    parameters : node.parameters,
-                    type : node.type,
-                    body : node.initialiser
-                }
-                , symbols
-                , check_only
-            );
-            if (initialiser.type.kind === 'class') {
-                symbols[node.name] = use_constructor(initialiser);
-            }
-            symbols[node.name] = initialiser;
+            symbols[node.name] = evaluate(node, symbols, check_only);
         },
     }
     method[node.node]();
@@ -274,15 +206,24 @@ function evaluate(node, symbols, check_only) {
             );
             return ans;
         },
+        var : function () {
+            return evaluate(
+                {
+                    node : "function",
+                    parameters : node.parameters,
+                    type : node.type,
+                    body : node.initialiser
+                }
+                , symbols
+                , check_only
+            );
+        },
         template_application : function () {
             // resolve template arguments
             var template = evaluate(node.template, symbols, true);
             var args = node.arguments.map(
                 function (a) {
-                    var ans = evaluate(a, symbols, true);
-                    if (ans.type.kind !== "class") {
-                        error("Template argument does not resolve to a type");
-                    }
+                    return resolve_type(a, symbols, true);
                 }
             );
             // put the template arguments into the parameters
@@ -306,7 +247,12 @@ function evaluate(node, symbols, check_only) {
             if (template.template_parameters.length === node.arguments.length) {
                 var template_symbols = copy_symbols(symbols);
                 for (var i = 0; i < args.length; ++i) {
-                    template_symbols[template.template_parameters[i]] = args[i];
+                    template_symbols[template.template_parameters[i]] = {
+                        type : {
+                            kind : 'type'
+                        },
+                        value : args[i]
+                    };
                 }
                 return evaluate(template.content, template_symbols, check_only);
             } else {
@@ -320,7 +266,7 @@ function evaluate(node, symbols, check_only) {
                 case "class":
                     error("Not implemented");
                 case "native": {
-                    var ans = natives[type.built_in][node.member];
+                    var ans = built_in_types[type.built_in][node.member];
                     if (ans === undefined) {
                         error("Member does not exist in this built-in type");
                     }
@@ -355,7 +301,7 @@ function evaluate(node, symbols, check_only) {
             // call the function
             var type = resolve_type(lhs.type, symbols);
             if (type.kind === 'array') {
-                if (!compatible(built_in_type('Integer'), rhs.type)) {
+                if (!compatible(built_in_type('Integer'), rhs.type, symbols)) {
                     error("Array index must be an integer");
                 }
                 if (check_only) {
@@ -368,7 +314,7 @@ function evaluate(node, symbols, check_only) {
                     }
                 }
             } else if (type.kind === 'function') {
-                if (!compatible(type.parameter, rhs.type)) {
+                if (!compatible(type.parameter, rhs.type, symbols)) {
                     error("Argument type does not match parameter type");
                 }
                 if (check_only) {
@@ -403,6 +349,14 @@ function evaluate(node, symbols, check_only) {
                 error("Cannot call a value other than a function or an array");
             }
         },
+        built_in_type() {
+            return {
+                type : {
+                    kind : "type",
+                },
+                value : node.type
+            };
+        },
         identifier : function () {
             if (symbols[node.name] === undefined) {
                 error("Cannot resolve symbol " + node.name);
@@ -414,6 +368,13 @@ function evaluate(node, symbols, check_only) {
             */
             return symbols[node.name];
         },
+        this : function () {
+            var ans = symbols['@this'];
+            if (ans === undefined) {
+                error("Cannot use @this in a non-class context");
+            }
+            return ans;
+        },
         function : function () {
             var closure_symbols = copy_symbols(symbols);
             var parameters = node.parameters;
@@ -423,39 +384,18 @@ function evaluate(node, symbols, check_only) {
                 }
             );
             var body_type = evaluate(node.body, closure_symbols, true).type;
-            if (node.type !== null && !compatible(node.type, body_type)) {
+            if (node.type !== null && !compatible(node.type, body_type, symbols)) {
                 error("Type of function body does not match declared type");
             }
-            var return_type = node.type === null ? body_type : node.type;
+            var return_type = node.type === null ? body_type : resolve_type(node.type, symbols);
             if (parameters.length === 0) {
                 return {
                     type : return_type,
                     value : evaluate(node.body, symbols).value
                 };
             } else {
-                var generate_type = function (parameters) {
-                    if (parameters.length === 1) {
-                        return {
-                            type : {
-                                kind : 'function', 
-                                parameter : parameters[0].type, 
-                                return : return_type
-                            }
-                        };
-                    } else {
-                        var param = parameters.shift();
-                        var child = generate_type(parameters);
-                        return {
-                            type : {
-                                kind : 'function', 
-                                parameter : parameters[0].type, 
-                                return : child.type
-                            }
-                        };
-                    }
-                };
                 return {
-                    type : generate_type(node.parameters),
+                    type : generate_function_type(node.parameters, return_type, symbols),
                     value : {
                         parameters : node.parameters,
                         body : node.body,
@@ -473,6 +413,7 @@ function evaluate(node, symbols, check_only) {
                     !compatible(
                         type
                         , evaluate(node.elements[i], symbols).type
+                        , symbols
                     )
                 ) {
                     error("Array literal contains inconsistent types");
