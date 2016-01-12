@@ -338,10 +338,9 @@ native_expression
     }
 
 function_expression
-    = '@function' _ n: identifier p:('(' _ parameter_list ')'_ )? t:(':' _ type)? '{' _ e:program '}' _ {
+    = '@function' _ p:('(' _ parameter_list ')'_ )? t:(':' _ type)? '{' _ e:program '}' _ {
         return {
             node : "function",
-            name : n.trim(),
             parameters : p === null ? [] : p[2],
             type : t === null ? null : t[2],
             body : e,
