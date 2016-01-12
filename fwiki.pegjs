@@ -403,6 +403,7 @@ literal
     / float_literal
     / int_literal
     / array_literal
+    / boolean_literal
     
 char_literal
     = "'" c:(char / '"') "'" _
@@ -440,6 +441,10 @@ array_literal
         head.push(tail);
         return {node : "array", elements : head};
     }
+
+boolean_literal
+    = 'True' _ { return {node : "literal", type : built_in_type("Boolean"), value : true}; }
+    / 'False' _ { return {node : "literal", type : built_in_type("Boolean"), value : false}; }
 
 char
     = (! ('\\' / '"' / "'")) . {
