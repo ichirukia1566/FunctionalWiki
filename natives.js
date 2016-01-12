@@ -13,8 +13,26 @@ var natives = {
     '*' : function (symbols) {
         return symbols['@this'].value * symbols.rhs.value;
     },
+    '/' : function (symbols) {
+        return symbols['@this'].value / symbols.rhs.value;
+    },
     '>' : function (symbols) {
         return symbols['@this'].value > symbols.rhs.value;
+    },
+    '<' : function (symbols) {
+        return symbols['@this'].value < symbols.rhs.value;
+    },
+    '>=' : function (symbols) {
+        return symbols['@this'].value >= symbols.rhs.value;
+    },
+    '<=' : function (symbols) {
+        return symbols['@this'].value <= symbols.rhs.value;
+    },
+    '==' : function (symbols) {
+        return symbols['@this'].value == symbols.rhs.value;
+    },
+    '!=' : function (symbols) {
+        return symbols['@this'].value != symbols.rhs.value;
     },
     true : function () {
         return true;
