@@ -43,8 +43,261 @@ var natives = {
 };
 
 var built_in_types = {
-    Boolean : {},
-    Float : {},
+    Boolean : {
+        '==' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Boolean"),
+                return : built_in_type("Boolean"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Boolean"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "==",
+                    type : built_in_type("Boolean")
+                },
+                symbols : {}
+            }
+        },
+        '!=' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Boolean"),
+                return : built_in_type("Boolean"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Boolean"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "!=",
+                    type : built_in_type("Boolean")
+                },
+                symbols : {}
+            }
+        },},
+    Float : {
+        '>' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Float"),
+                return : built_in_type("Boolean"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Float"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : ">",
+                    type : built_in_type("Boolean")
+                },
+                symbols : {}
+            }
+        },
+        '<' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Float"),
+                return : built_in_type("Boolean"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Float"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "<",
+                    type : built_in_type("Boolean")
+                },
+                symbols : {}
+            }
+        },
+        '>=' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Float"),
+                return : built_in_type("Boolean"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Float"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : ">=",
+                    type : built_in_type("Boolean")
+                },
+                symbols : {}
+            }
+        },
+        '<=' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Float"),
+                return : built_in_type("Boolean"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Float"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "<=",
+                    type : built_in_type("Boolean")
+                },
+                symbols : {}
+            }
+        },
+        '==' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Float"),
+                return : built_in_type("Boolean"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Float"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "==",
+                    type : built_in_type("Boolean")
+                },
+                symbols : {}
+            }
+        },
+        '!=' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Float"),
+                return : built_in_type("Boolean"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Float"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "!=",
+                    type : built_in_type("Boolean")
+                },
+                symbols : {}
+            }
+        },
+        '+' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Float"),
+                return : built_in_type("Float"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Float"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "+",
+                    type : built_in_type("Float")
+                },
+                symbols : {}
+            }
+        },
+        '-' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Float"),
+                return : built_in_type("Float"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Float"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "-",
+                    type : built_in_type("Float")
+                },
+                symbols : {}
+            }
+        },
+        '*' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Float"),
+                return : built_in_type("Float"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Float"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "*",
+                    type : built_in_type("Float")
+                },
+                symbols : {}
+            }
+        },
+        '/' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Float"),
+                return : built_in_type("Float"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Float"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "/",
+                    type : built_in_type("Float")
+                },
+                symbols : {}
+            }
+        },
+    },
     Character : {},
     Integer : {
         '>' : {
@@ -63,6 +316,111 @@ var built_in_types = {
                 body : {
                     node : "native",
                     native : ">",
+                    type : built_in_type("Boolean")
+                },
+                symbols : {}
+            }
+        },
+        '<' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Integer"),
+                return : built_in_type("Boolean"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Integer"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "<",
+                    type : built_in_type("Boolean")
+                },
+                symbols : {}
+            }
+        },
+        '>=' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Integer"),
+                return : built_in_type("Boolean"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Integer"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : ">=",
+                    type : built_in_type("Boolean")
+                },
+                symbols : {}
+            }
+        },
+        '<=' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Integer"),
+                return : built_in_type("Boolean"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Integer"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "<=",
+                    type : built_in_type("Boolean")
+                },
+                symbols : {}
+            }
+        },
+        '==' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Integer"),
+                return : built_in_type("Boolean"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Integer"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "==",
+                    type : built_in_type("Boolean")
+                },
+                symbols : {}
+            }
+        },
+        '!=' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Integer"),
+                return : built_in_type("Boolean"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Integer"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "!=",
                     type : built_in_type("Boolean")
                 },
                 symbols : {}
@@ -126,6 +484,27 @@ var built_in_types = {
                 body : {
                     node : "native",
                     native : "*",
+                    type : built_in_type("Integer")
+                },
+                symbols : {}
+            }
+        },
+        '/' : {
+            type : {
+                kind : "function",
+                parameter : built_in_type("Integer"),
+                return : built_in_type("Integer"),
+            },
+            value : {
+                parameters : [
+                    {
+                        name : "rhs",
+                        type : built_in_type("Integer"),
+                    },
+                ],
+                body : {
+                    node : "native",
+                    native : "/",
                     type : built_in_type("Integer")
                 },
                 symbols : {}
