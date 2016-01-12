@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 "use strict";
 
 function built_in_type(name) {
@@ -7,14 +6,6 @@ function built_in_type(name) {
         built_in : name
     };
 }
-=======
-function built_in_type(name) {
-        return {
-            kind : "native",
-            built_in : name
-        };
-    }
-
 var natives = {
     if : function (symbols) {
         return symbols.cond.value ? symbols.then.value : symbols.else.value;
@@ -204,7 +195,6 @@ var natives = {
         },
     }
 };
->>>>>>> 893381e61992ac9c10c2a7035a3f9e7c5fcf4164
 
 function InterpreterError() {
     Error.apply(this, arguments);
