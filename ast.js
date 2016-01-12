@@ -225,7 +225,7 @@ function generate_function_type(parameters, return_type, symbols) {
             parameter : resolve_type(parameters[0].type, symbols), 
             return : return_type
         };
-    } else {
+    } else if (parameters.length > 1)  {
         var param = parameters.shift();
         return {
             kind : 'function', 
