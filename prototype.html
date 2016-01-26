@@ -1,0 +1,116 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>Prototype</title>
+  <script src="ast.js"></script>
+  <script src="fwiki.js"></script>
+  <script src="natives.js"></script>
+  <script src="index.js"></script>
+  <script type="text/javascript">
+    var fileName;
+    function filename() {
+      var name = prompt("Please enter file name", "newfile");
+      if (name != null)
+          fileName = name;
+      save();
+    }
+    function save() {
+      var code = document.getElementById("code").value;
+      var code_ = code.replace(/\r\n|\r|\n/g,"\n");
+      var xmlhttp;
+      if(window.XMLHttpRequest) {
+        xmlhttp = new XMLHttpRequest();
+      } else {
+        xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+      }
+      xmlhttp.onreadystatechange = function() {
+        if(xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+          alert(xmlhttp.responseText);
+        }
+      }
+      xmlhttp.open("GET", "saveHandler.php?code=" + code_ + "&filename=" + fileName, true);
+      xmlhttp.send();
+    }
+  </script>
+</head>
+<body>
+  <table>
+    <tr>
+      <td rowspan="2">
+        <textarea id="code" cols="80" rows="25">@var<T> if(cond : @Boolean, then : T, else : T) : T = @native(if : T);&#13;&#10;@var true = @native(true : @Boolean);&#13;&#10;@var false = @native(false : @Boolean);
+        </textarea>
+      </td>
+      <td>
+        <td><button type="button" onclick="filename();">Save</button></td>
+      </td>
+      <td rowspan="2">
+        <textarea readonly="readonly" id="output" cols = "80" rows="25"></textarea>
+      </td>
+    </tr>
+    <tr>
+      <td></td>
+      <td><button type="button" onclick="run();">Run</button></td>
+      <td></td>
+    </tr>
+  </table>
+</body>
+</html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>Prototype</title>
+  <script src="ast.js"></script>
+  <script src="fwiki.js"></script>
+  <script src="natives.js"></script>
+  <script src="index.js"></script>
+  <script type="text/javascript">
+    var fileName;
+    function filename() {
+      var name = prompt("Please enter file name", "newfile");
+      if (name != null)
+          fileName = name;
+      save();
+    }
+    function save() {
+      var code = document.getElementById("code").value;
+      var code_ = code.replace(/\r\n|\r|\n/g,"\n");
+      var xmlhttp;
+      if(window.XMLHttpRequest) {
+        xmlhttp = new XMLHttpRequest();
+      } else {
+        xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+      }
+      xmlhttp.onreadystatechange = function() {
+        if(xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+          alert(xmlhttp.responseText);
+        }
+      }
+      xmlhttp.open("GET", "saveHandler.php?code=" + code_ + "&filename=" + fileName, true);
+      xmlhttp.send();
+    }
+  </script>
+</head>
+<body>
+  <table>
+    <tr>
+      <td rowspan="2">
+        <textarea id="code" cols="80" rows="25">@var<T> if(cond : @Boolean, then : T, else : T) : T = @native(if : T);&#13;&#10;@var true = @native(true : @Boolean);&#13;&#10;@var false = @native(false : @Boolean);
+        </textarea>
+      </td>
+      <td>
+        <td><button type="button" onclick="filename();">Save</button></td>
+      </td>
+      <td rowspan="2">
+        <textarea readonly="readonly" id="output" cols = "80" rows="25"></textarea>
+      </td>
+    </tr>
+    <tr>
+      <td></td>
+      <td><button type="button" onclick="run();">Run</button></td>
+      <td></td>
+    </tr>
+  </table>
+</body>
+</html>
