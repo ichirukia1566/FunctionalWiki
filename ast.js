@@ -457,10 +457,12 @@ function evaluate(node, symbols, check_only) {
                 case "class":
                     error("Not implemented");
                 case "native": {
-                    var ans = built_in_types[type.built_in][node.member];
+                    var ans = copy_symbols(built_in_types[type.built_in][node.member]);
+                    ans.value = copy_symbols(ans.value);
                     if (ans === undefined) {
                         error("Member does not exist in this built-in type");
                     }
+                    ans.value.symbols = copy_symbols(ans.value.symbols);
                     ans.value.symbols['@this'] = object;
                     return ans;
                 }
@@ -483,6 +485,23 @@ function evaluate(node, symbols, check_only) {
                 type : node.type,
                 value : check_only ? undefined : natives[node.native](symbols)
             };
+        },
+        if : function () {
+            // evaluate the condition
+            var cond = evaluate(node.condition, symbols, check_only);
+            if (!compatible(built_in_type('Boolean'), cond.type, symbols)) {
+                error("If condition must be a boolean");
+            }
+            var lhs_t = evaluate(node.then, symbols, true);
+            var rhs_t = evaluate(node.else, symbols, true);
+            if (!compatible(lhs_t.type, rhs_t.type, symbols)) {
+                error("The types between if-branches must be the same");
+            }
+            if (check_only) {
+                return {type : lhs_t.type};
+            } else {
+                return {type : lhs_t.type, value : evaluate(cond.value ? node.then : node.else, symbols, check_only).value};
+            }
         },
         call : function () {
             // evaluate the arguments
@@ -550,14 +569,14 @@ function evaluate(node, symbols, check_only) {
         },
         identifier : function () {
             if (symbols[node.name] === undefined) {
-                error("Cannot resolve symbol " + node.name);
+                error("Cannot resolve symbol " + node.name + " (a recursive function's return type must be declared for it to be resolved in the body)");
             }
             /*
             if (symbols[node.name].type.kind === 'class') {
                 return symbols[node.name].value['@constructor'];
             }
             */
-            return symbols[node.name];
+            return copy_symbols(symbols[node.name]);
         },
         this : function () {
             var ans = symbols['@this'];

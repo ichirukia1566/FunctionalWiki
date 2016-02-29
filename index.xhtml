@@ -9,9 +9,10 @@
     <script src="index.js"/>
   </head>
   <body>
-    <textarea id="code" cols="80" rows="25"><![CDATA[@var<T> if(cond : @Boolean, then : T, else : T) : T = @native(if : T);
-@var true = @native(true : @Boolean);
+    <textarea id="code" cols="80" rows="25"><![CDATA[@var true = @native(true : @Boolean);
 @var false = @native(false : @Boolean);
+@var factorial(n : @Integer) : @Integer = @if (n > 0) (n * factorial(n - 1)) 1;
+factorial 6
 ]]></textarea>
     <br/>
     <textarea readonly="readonly" id="output" cols = "80" rows="25"/>

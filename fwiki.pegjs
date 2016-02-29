@@ -275,7 +275,15 @@ postfix_expression
         }
         return recursion(head, tail);
     }
-
+    / "@if" _ cond:template_member_expression then:template_member_expression 
+        e:template_member_expression {
+            return {
+                node : "if",
+                condition : cond,
+                then : then,
+                else : e
+            };
+        }
     
 template_member_expression
     = head:atom tail:
