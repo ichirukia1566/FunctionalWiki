@@ -327,7 +327,9 @@ function declare(node, symbols, check_only) {
             symbols[node.name] = {
                 type : {
                     kind : "class",
-                    superclass : resolve_type(node.superclass, symbols)
+                    superclass : node.superclass === null 
+                        ? null 
+                        : resolve_type(node.superclass, symbols)
                 },
             };
             symbols[node.name] = evaluate(node, symbols, true);
@@ -370,26 +372,29 @@ function evaluate(node, symbols, check_only) {
             var ans = {
                 type : {
                     kind : "class",
+                    members : {}
                 },
                 value : {
-                    superclass : resolve_type(node.superclass, symbols),
+                    superclass : node.superclass === null 
+                        ? null 
+                        : resolve_type(node.superclass, symbols),
                     static_members : {}, // store the value directly
                     members : {} // store the AST
                 }
             };
             var class_symbols = copy_symbols(symbols);
-            ans.value.forEach(
+            node.members.forEach(
                 function (m) {
                     // static members
-                    if (m.node !== 'member') {
+                    if (m.node !== 'member_var') {
                         declare(m, class_symbols, check_only);
                         ans.value.static_members[m.name] = class_symbols[m.name];
                     }
                 }
             );
-            ans.value.forEach(
+            node.members.forEach(
                 function (m) {
-                    if (m.node === 'member') {
+                    if (m.node === 'member_var') {
                         // directly store the AST, only check at point of usage
                         ans.type.members[m.name] = m;
                     }

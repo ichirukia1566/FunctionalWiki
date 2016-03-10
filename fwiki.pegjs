@@ -105,7 +105,7 @@ class_var_declaration
         name:identifier p:("(" _ parameter_list ")" _ )? type:(":" _ type)? 
         initialiser:(initialiser / ";" _) { 
             return {
-                node : "member", 
+                node : "member_var", 
                 name : name, 
                 template_parameters : t === null ? null : t[2],
                 type : type === null ? null : type[2], 
