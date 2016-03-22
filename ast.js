@@ -6,195 +6,6 @@ function built_in_type(name) {
         built_in : name
     };
 }
-var natives = {
-    if : function (symbols) {
-        return symbols.cond.value ? symbols.then.value : symbols.else.value;
-    },
-    plus : function (symbols) {
-        return symbols['@this'].value + symbols.rhs.value;
-    },
-    minus : function (symbols) {
-        return symbols['@this'].value - symbols.rhs.value;
-    },
-    times : function (symbols) {
-        return symbols['@this'].value * symbols.rhs.value;
-    },
-    divide : function (symbols) {
-        return symbols['@this'].value / symbols.rhs.value;
-    },
-    Integer : {
-        '+' : {
-            type : {
-                kind : "function",
-                parameter : built_in_type("Integer"),
-                return : built_in_type("Integer"),
-            },
-            value : {
-                parameters : [
-                    {
-                        name : "rhs",
-                        type : built_in_type("Integer"),
-                    },
-                ],
-                body : {
-                    node : "native",
-                    native : "plus",
-                    type : built_in_type("Integer")
-                },
-                symbols : {}
-            }
-        },
-        '-' : {
-            type : {
-                kind : "function",
-                parameter : built_in_type("Integer"),
-                return : built_in_type("Integer"),
-            },
-            value : {
-                parameters : [
-                    {
-                        name : "rhs",
-                        type : built_in_type("Integer"),
-                    },
-                ],
-                body : {
-                    node : "native",
-                    native : "minus",
-                    type : built_in_type("Integer")
-                },
-                symbols : {}
-            }
-        },
-        '*' : {
-            type : {
-                kind : "function",
-                parameter : built_in_type("Integer"),
-                return : built_in_type("Integer"),
-            },
-            value : {
-                parameters : [
-                    {
-                        name : "rhs",
-                        type : built_in_type("Integer"),
-                    },
-                ],
-                body : {
-                    node : "native",
-                    native : "times",
-                    type : built_in_type("Integer")
-                },
-                symbols : {}
-            }
-        },
-        '/' : {
-            type : {
-                kind : "function",
-                parameter : built_in_type("Integer"),
-                return : built_in_type("Integer"),
-            },
-            value : {
-                parameters : [
-                    {
-                        name : "rhs",
-                        type : built_in_type("Integer"),
-                    },
-                ],
-                body : {
-                    node : "native",
-                    native : "divide",
-                    type : built_in_type("Integer")
-                },
-                symbols : {}
-            }
-        },
-    },
-    Float : {
-        '+' : {
-            type : {
-                kind : "function",
-                parameter : built_in_type("Float"),
-                return : built_in_type("Float"),
-            },
-            value : {
-                parameters : [
-                    {
-                        name : "rhs",
-                        type : built_in_type("Float"),
-                    },
-                ],
-                body : {
-                    node : "native",
-                    native : "plus",
-                    type : built_in_type("Float"),
-                },
-                symbols : {}
-            }
-        },
-        '-' : {
-            type : {
-                kind : "function",
-                parameter : built_in_type("Float"),
-                return : built_in_type("Float"),
-            },
-            value : {
-                parameters : [
-                    {
-                        name : "rhs",
-                        type : built_in_type("Float"),
-                    },
-                ],
-                body : {
-                    node : "native",
-                    native : "minus",
-                    type : built_in_type("Float"),
-                },
-                symbols : {}
-            }
-        },
-        '*' : {
-            type : {
-                kind : "function",
-                parameter : built_in_type("Float"),
-                return : built_in_type("Float"),
-            },
-            value : {
-                parameters : [
-                    {
-                        name : "rhs",
-                        type : built_in_type("Float"),
-                    },
-                ],
-                body : {
-                    node : "native",
-                    native : "times",
-                    type : built_in_type("Float"),
-                },
-                symbols : {}
-            }
-        },
-        '/' : {
-            type : {
-                kind : "function",
-                parameter : built_in_type("Float"),
-                return : built_in_type("Float"),
-            },
-            value : {
-                parameters : [
-                    {
-                        name : "rhs",
-                        type : built_in_type("Float"),
-                    },
-                ],
-                body : {
-                    node : "native",
-                    native : "divide",
-                    type : built_in_type("Float"),
-                },
-                symbols : {}
-            }
-        },
-    }
-};
 
 function InterpreterError() {
     Error.apply(this, arguments);
@@ -247,8 +58,6 @@ function resolve_type(type, symbols) {
                 kind : "object",
                 class : class_.value
             };
-        } else if (class_.type.kind === 'type') {
-            return  class_.value;
         } else {
             error("Symbol resolves to non-type in a type context");
         }
@@ -283,7 +92,10 @@ function compatible(declared, actual, symbols) {
         },
         object : function () {
             // TODO: possibility of infinite recursion
-            for (var member in declared.value) {
+            if (!compatible(declared.class.superclass, actual.class.superclass)) {
+                return false;
+            }
+            for (var member in declared.class.members) {
                 if (actual.value[member] === undefined) {
                     return false;
                 }
@@ -297,7 +109,7 @@ function compatible(declared, actual, symbols) {
             return declared.built_in === actual.built_in;
         }
     };
-    return comparator[declared.kind]();
+    retun comparator[declared.kind]();
 }
 
 function use_constructor(class_obj) {
@@ -324,12 +136,16 @@ function declare(node, symbols, check_only) {
             };
         },
         class : function () {
+            // add myself to support recursion
             symbols[node.name] = {
                 type : {
                     kind : "class",
+                },
+                value : {
                     superclass : node.superclass === null 
                         ? null 
-                        : resolve_type(node.superclass, symbols)
+                        : resolve_type(node.superclass, symbols),
+                    members : {},
                 },
             };
             symbols[node.name] = evaluate(node, symbols, true);
@@ -372,14 +188,13 @@ function evaluate(node, symbols, check_only) {
             var ans = {
                 type : {
                     kind : "class",
-                    members : {}
                 },
                 value : {
                     superclass : node.superclass === null 
                         ? null 
                         : resolve_type(node.superclass, symbols),
+                    members : {}, // store the AST
                     static_members : {}, // store the value directly
-                    members : {} // store the AST
                 }
             };
             var class_symbols = copy_symbols(symbols);
@@ -396,7 +211,7 @@ function evaluate(node, symbols, check_only) {
                 function (m) {
                     if (m.node === 'member_var') {
                         // directly store the AST, only check at point of usage
-                        ans.type.members[m.name] = m;
+                        ans.value.members[m.name] = m;
                     }
                 }
             );
@@ -485,11 +300,42 @@ function evaluate(node, symbols, check_only) {
                     error("Not implemented");
             }
         },
+        update : function() {
+            if (object.type.kind === 'class') {
+                // create a new instance of the class
+                var type = {
+                    kind : 'object',
+                    class : object.value,
+                };
+                
+                // TODO: create a new instance of the class
+            } else if (object.type.kind === 'template') {
+                error("A template is not a class. Please apply template arguments to it.");
+            } else if (object.type.kind === 'object') {
+                // TODO: update the members
+            } else {
+                error("Cannot update members of a non-class object");
+            }
+        },
         native : function () {
             return {
                 type : node.type,
                 value : check_only ? undefined : natives[node.native](symbols)
             };
+        },
+        new : function () {
+            var type = resolve_type(node.type, symbols);
+            if (type.kind === 'object') {
+                // TODO: constructor call
+            } else if (type.kind === 'template') {
+                error("A template is not a type. Please apply template arguments to it.");
+            } else if (type.kind === 'function') {
+                error("Cannot new a function");
+            } else if (type.kind === 'array') {
+                // TODO: create an empty array
+            } else if (type.kind === 'native') {
+                // TODO: create an empty primitive
+            }
         },
         if : function () {
             // evaluate the condition

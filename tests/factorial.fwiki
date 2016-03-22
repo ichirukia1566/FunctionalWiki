@@ -1,0 +1,4 @@
+@var true = @native(true : @Boolean);
+@var false = @native(false : @Boolean);
+@var factorial(n : @Integer) : @Integer = @if (n > 0) (n * factorial(n - 1)) 1;
+factorial 6

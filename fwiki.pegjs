@@ -261,16 +261,24 @@ unary_expression
     }   
     
 postfix_expression
-    = head:template_member_expression tail:template_member_expression* {
+    = head:template_member_expression tail:(template_member_expression / member_update)* {
         function recursion(head, tail) {
             if (tail.length === 0) {
                 return head;
             } else {
-                  return {
-                    node : "call",
-                    function : recursion(head, tail.slice(0, tail.length - 1)), 
-                    argument : tail[tail.length - 1]
-                };
+                if (tail[tail.length - 1] instanceof Array) {
+                    return {
+                        node : "update",
+                        object : recursion(head, tail.slice(0, tail.length - 1)),
+                        update : tail[tail.length - 1],
+                    };
+                } else {
+                    return {
+                        node : "call",
+                        function : recursion(head, tail.slice(0, tail.length - 1)), 
+                        argument : tail[tail.length - 1]
+                    };
+                }
             }
         }
         return recursion(head, tail);
@@ -284,6 +292,16 @@ postfix_expression
                 else : e
             };
         }
+
+member_update
+    = '{' _ x:member_assignment* '}' _ {
+        return x;
+    }
+
+member_assignment
+    = i:identifier '=' _ e:expression ';' _ {
+        return {name : i, value : e};
+    }
     
 template_member_expression
     = head:atom tail:
@@ -330,10 +348,19 @@ atom
     }
     / function_expression
     / native_expression
+    / new_expression
 
 built_in_type
     = t:("@Character" / "@Integer" / "@Float" / "@Boolean") _ {
         return built_in_type(t.substr(1));
+    }
+
+new_expression
+    = '@new' _ '(' _ t:type ')' _ {
+        return {
+            node : "new",
+            type : t,
+        };
     }
 
 native_expression
