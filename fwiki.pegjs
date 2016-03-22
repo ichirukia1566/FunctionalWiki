@@ -90,59 +90,15 @@ variable_declaration
         }
 
 member_declaration
-    = p:("@private" _)? d:(
-        class_declaration 
-        / class_var_declaration 
-        / static_declaration 
-        / constructor_declaration
-     ) { 
-         d['private'] = p !== null; 
-         return d;
-     }
-        
-class_var_declaration
-    = "@var" _ t:( "<" _ template_parameter_list ">" _ )?
-        name:identifier p:("(" _ parameter_list ")" _ )? type:(":" _ type)? 
-        initialiser:(initialiser / ";" _) { 
+    = "@var" _ name:identifier p:("(" _ parameter_list ")" _ )? ":" _ type:type 
+        initialiser:(initialiser / (";" _ )) { 
             return {
-                node : "member_var", 
+                node : "var", 
                 name : name, 
-                template_parameters : t === null ? null : t[2],
-                type : type === null ? null : type[2], 
+                type : type, 
                 parameters : p === null ? [] : p[2],
                 initialiser : initialiser instanceof Array ? null : initialiser
             };
-        }
-
-constructor_declaration
-    = "@constructor" _ t:("<" _ template_parameter_list ">" _ )? 
-        p:("(" _ parameter_list ")" _ )? initialiser:initialiser {
-            return generate_template(
-                {
-                    node : "var", 
-                    name : "@constructor",
-                    type : null,
-                    parameters : p === null ? [] : p[2],
-                    initialiser : initialiser
-                }
-                , t === null ? null : t[2]
-            );
-        }
-
-static_declaration
-    = "@static" _ t:("<" _ t:template_parameter_list ">" _ )? 
-        name:identifier p:("(" _ p:parameter_list ")" _ )? type:(":" _ type)? 
-        initialiser:initialiser {
-            return generate_template(
-                {
-                    node : "var", 
-                    name : name, 
-                    type : type === null ? null : type[2], 
-                    parameters : p === null ? [] : p[2],
-                    initialiser : initialiser
-                }
-                , t === null ? null : t[2] 
-            );
         }
 
 initialiser
@@ -261,24 +217,16 @@ unary_expression
     }   
     
 postfix_expression
-    = head:template_member_expression tail:(template_member_expression / member_update)* {
+    = head:template_member_expression tail:template_member_expression* {
         function recursion(head, tail) {
             if (tail.length === 0) {
                 return head;
             } else {
-                if (tail[tail.length - 1] instanceof Array) {
-                    return {
-                        node : "update",
-                        object : recursion(head, tail.slice(0, tail.length - 1)),
-                        update : tail[tail.length - 1],
-                    };
-                } else {
-                    return {
-                        node : "call",
-                        function : recursion(head, tail.slice(0, tail.length - 1)), 
-                        argument : tail[tail.length - 1]
-                    };
-                }
+                return {
+                    node : "call",
+                    function : recursion(head, tail.slice(0, tail.length - 1)), 
+                    argument : tail[tail.length - 1]
+                };
             }
         }
         return recursion(head, tail);
@@ -294,12 +242,19 @@ postfix_expression
         }
 
 member_update
-    = '{' _ x:member_assignment* '}' _ {
-        return x;
+    = '{' _ '}' _ {
+        return [];
+    }
+    / '{' head:member_assignment tail:(
+            ';' _ x:member_assignment {return x;}
+        )* '}' _ 
+    {
+        tail.unshift(head);
+        return tail;
     }
 
 member_assignment
-    = i:identifier '=' _ e:expression ';' _ {
+    = i:identifier '=' _ e:expression _ {
         return {name : i, value : e};
     }
     
@@ -308,7 +263,8 @@ template_member_expression
         (
             '.' _ identifier
             / '<' _ template_arguments_list '>' _
-        )*
+            / member_update
+        )* 
     {
         function recursion(head, tail) {
             if (tail.length === 0) {
@@ -320,11 +276,17 @@ template_member_expression
                         object : recursion(head, tail.slice(0, tail.length - 1)),
                         member : tail[tail.length - 1][2]
                     };
-                } else {
+                } else if (tail[tail.length - 1][0] === '<') {
                     return {
                         node : "template_application",
                         template : recursion(head, tail.slice(0, tail.length - 1)),
                         arguments : tail[tail.length - 1][2]
+                    };
+                } else {
+                    return {
+                        node : "update",
+                        object : recursion(head, tail.slice(0, tail.length - 1)),
+                        update : tail[tail.length - 1],
                     };
                 }
             }
@@ -348,19 +310,10 @@ atom
     }
     / function_expression
     / native_expression
-    / new_expression
 
 built_in_type
     = t:("@Character" / "@Integer" / "@Float" / "@Boolean") _ {
         return built_in_type(t.substr(1));
-    }
-
-new_expression
-    = '@new' _ '(' _ t:type ')' _ {
-        return {
-            node : "new",
-            type : t,
-        };
     }
 
 native_expression

@@ -20,11 +20,13 @@ function error(message) {
 
 function generate_function_type(parameters, return_type, symbols) {
     parameters = parameters.slice();
-    if (parameters.length === 1) {
+    if (parameters.length === 0) {
+        return resolve_type(return_type, symbols);
+    } else if (parameters.length === 1) {
         return {
             kind : 'function', 
             parameter : resolve_type(parameters[0].type, symbols), 
-            return : return_type
+            return : resolve_type(return_type, symbols),
         };
     } else if (parameters.length > 1)  {
         var param = parameters.shift();
@@ -50,14 +52,29 @@ function copy_symbols(symbols) {
     return copy;
 }
 
+function create_object_type_from_class(class_value) {
+    var result = {
+        kind : "object",
+        superclass : class_value.superclass,
+        members : {},
+    };
+    for (var name in class_value.members) {
+        if (class_value.members.hasOwnProperty(name)) {
+            var declaration = class_value.members[name];
+            result.members[name] = generate_function_type(declaration.parameters, declaration.type, class_value.symbols);
+        }
+    }
+    return result;
+}
+
 function resolve_type(type, symbols) {
+    if (type.kind === "undefined") {
+        error("internal error: resolve_type is not called with a type");
+    }
     if (type.kind === "identifier") {
         var class_ = evaluate(type.qualified_id, symbols, true);
         if (class_.type.kind === 'class') {
-            return {
-                kind : "object",
-                class : class_.value
-            };
+            return create_object_type_from_class(class_.value);
         } else {
             error("Symbol resolves to non-type in a type context");
         }
@@ -109,7 +126,7 @@ function compatible(declared, actual, symbols) {
             return declared.built_in === actual.built_in;
         }
     };
-    retun comparator[declared.kind]();
+    return comparator[declared.kind]();
 }
 
 function use_constructor(class_obj) {
@@ -194,27 +211,18 @@ function evaluate(node, symbols, check_only) {
                         ? null 
                         : resolve_type(node.superclass, symbols),
                     members : {}, // store the AST
-                    static_members : {}, // store the value directly
+                    symbols : copy_symbols(symbols),
                 }
             };
-            var class_symbols = copy_symbols(symbols);
             node.members.forEach(
                 function (m) {
-                    // static members
-                    if (m.node !== 'member_var') {
-                        declare(m, class_symbols, check_only);
-                        ans.value.static_members[m.name] = class_symbols[m.name];
-                    }
+                    // directly store the AST, only check at point of usage
+                    ans.value.members[m.name] = m;
                 }
             );
-            node.members.forEach(
-                function (m) {
-                    if (m.node === 'member_var') {
-                        // directly store the AST, only check at point of usage
-                        ans.value.members[m.name] = m;
-                    }
-                }
-            );
+            if (node.name !== undefined) {
+                ans.value.symbols[node.name] = ans;
+            }
             return ans;
         },
         var : function () {
@@ -274,8 +282,16 @@ function evaluate(node, symbols, check_only) {
             var object = evaluate(node.object, symbols, check_only);
             var type = resolve_type(object.type, symbols);
             switch (type.kind) {
-                case "class":
-                    error("Not implemented");
+                case "object":
+                    if (!object.type.members.hasOwnProperty[node.member]) {
+                        return {
+                            type : object.type.members[node.member],
+                            value : object.value[node.member],
+                        };
+                    } else {
+                        // TODO: add superclass support
+                        error("member " + node.member + " does not exist");
+                    }
                 case "native": {
                     var ans = copy_symbols(built_in_types[type.built_in][node.member]);
                     ans.value = copy_symbols(ans.value);
@@ -301,18 +317,59 @@ function evaluate(node, symbols, check_only) {
             }
         },
         update : function() {
+            // TODO: add superclass support
+            function update_members(object) {
+                object = {
+                    type : object.type,
+                    value : copy_symbols(object.value),
+                }
+                node.update.forEach(
+                    function (assignment) {
+                        var name = assignment.name;
+                        var init = evaluate(assignment.value, symbols, check_only);
+                        if (object.type.members[name] === undefined) {
+                            error("Member " + name + " does not exist");
+                        }
+                        if (!compatible(object.type.members[name], init.type)) {
+                            error("Member " + name + "has the wrong type");
+                        }
+                        object.value[name] = init.value;
+                    }
+                );
+                return object;
+            }
+            var object = evaluate(node.object, symbols, check_only);
             if (object.type.kind === 'class') {
                 // create a new instance of the class
-                var type = {
-                    kind : 'object',
-                    class : object.value,
-                };
-                
-                // TODO: create a new instance of the class
+                var new_object = update_members(
+                    {
+                        type : create_object_type_from_class(object.value),
+                        value : {},
+                    }
+                );
+                // assign the default values to remaining members
+                // XXX: problematic mechanic on @this regarding to closure,
+                // remove @this functionality?!
+                var class_symbols = copy_symbols(object.value.symbols);
+                class_symbols['@this'] = new_object;
+                for (var name in object.value.members) {
+                    if (object.value.members.hasOwnProperty(name)) {
+                        var declaration = object.value.members[name];
+                        if (new_object.value[name] === undefined) {
+                            if (declaration.initialiser === null) {
+                                error("Member " + name + " has no default value. A user-supplied value must be given.");
+                            }
+
+                            var result = evaluate(declaration, class_symbols, check_only);
+                            new_object.value[name] = result.value;
+                        }
+                    }
+                }
+                return new_object;
             } else if (object.type.kind === 'template') {
                 error("A template is not a class. Please apply template arguments to it.");
             } else if (object.type.kind === 'object') {
-                // TODO: update the members
+                return update_members(object);
             } else {
                 error("Cannot update members of a non-class object");
             }
@@ -322,20 +379,6 @@ function evaluate(node, symbols, check_only) {
                 type : node.type,
                 value : check_only ? undefined : natives[node.native](symbols)
             };
-        },
-        new : function () {
-            var type = resolve_type(node.type, symbols);
-            if (type.kind === 'object') {
-                // TODO: constructor call
-            } else if (type.kind === 'template') {
-                error("A template is not a type. Please apply template arguments to it.");
-            } else if (type.kind === 'function') {
-                error("Cannot new a function");
-            } else if (type.kind === 'array') {
-                // TODO: create an empty array
-            } else if (type.kind === 'native') {
-                // TODO: create an empty primitive
-            }
         },
         if : function () {
             // evaluate the condition
@@ -422,11 +465,6 @@ function evaluate(node, symbols, check_only) {
             if (symbols[node.name] === undefined) {
                 error("Cannot resolve symbol " + node.name + " (a recursive function's return type must be declared for it to be resolved in the body)");
             }
-            /*
-            if (symbols[node.name].type.kind === 'class') {
-                return symbols[node.name].value['@constructor'];
-            }
-            */
             return copy_symbols(symbols[node.name]);
         },
         this : function () {
