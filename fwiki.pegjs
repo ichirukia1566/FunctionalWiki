@@ -3,9 +3,12 @@
         return {
             node : "call",
             function : {
-                node : "member",
-                object : a,
-                member : op
+                node : "call",
+                function : {
+                    node : "identifier",
+                    name : op,
+                },
+                argument : a,
             },
             argument : b
         };
@@ -210,9 +213,12 @@ unary_expression
     = postfix_expression
     / op:("+" / "-" / "!" / "~") _ expr:unary_expression { 
         return {
-            node : "member", 
-            object : expr,
-            member : op
+            node : "call", 
+            function : {
+                node : "identifier",
+                name : op,
+            },
+            argument : expr,
         }; 
     }   
     
@@ -355,8 +361,11 @@ identifier
     = [_a-zA-Z\xA0-\uFFFF][_a-zA-Z0-9\xA0-\uFFFF]* _ {
         return text().trim();
     }
-    / '@operator' _ op:('!' / '~' / '+' / '-' / '++' / '*' / '/' / '%' / '<<' / '>>'
-        / '&' / '^' / '|' / '&&' / '||' / '==' / '!=' / '<' / '<=' / '>' / '>=') _ {
+    / '@operator' _ op:(
+        '++' / '+' / '-' / '*' / '/' / '%'
+        / '&&' / '||' / '&' / '^' / '|' / '!' / '~' / '<<' / '>>'
+        / '==' / '!=' / '<=' / '<' / '>=' / '>'
+    ) _ {
         return op;
     }
 

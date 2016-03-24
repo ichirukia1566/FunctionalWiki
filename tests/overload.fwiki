@@ -1,0 +1,4 @@
+@var hello(x : @Integer) : @Integer = 2;
+@var hello(x : @Character) : @Integer = 3;
+@var hello(x : @Boolean) : @Boolean = true;
+@if (hello false) (hello 2 + hello 'a') 999

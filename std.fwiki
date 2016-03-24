@@ -1,2 +1,8 @@
-@var<T> if(cond : Bool, then : T, else : T) : T = @native(if : T)
+@var true = @native(true : @Boolean);
+@var false = @native(false : @Boolean);
+@var @operator+(lhs : @Integer, rhs : @Integer) : @Integer = @native(plus : @Integer);
+@var @operator-(lhs : @Integer, rhs : @Integer) : @Integer = @native(minus : @Integer);
+@var @operator*(lhs : @Integer, rhs : @Integer) : @Integer = @native(times : @Integer);
+@var @operator>(lhs : @Integer, rhs : @Integer) : @Boolean = @native(greater : @Boolean);
+@var @operator>=(lhs : @Integer, rhs : @Integer) : @Boolean = @native(greater_equal : @Boolean);
 

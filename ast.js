@@ -129,11 +129,20 @@ function compatible(declared, actual, symbols) {
     return comparator[declared.kind]();
 }
 
-function use_constructor(class_obj) {
-    var constructor = class_obj.value['@constructor'];
-    if (constructor === undefined) {
-        error("Cannot use a class without a constructor as a value");
-    }
+/** Check is new_type is overloadable on name in symbols
+ */
+function check_overload(symbols, name, new_type) {
+    symbols[name].forEach(
+        function (variant) {
+            if (variant.type.kind === 'class') {
+                error("Cannot overload a class");
+            } else if (variant.type.kind !== 'function' || new_type.kind !== 'function') {
+                error("Cannot overload a non-function");
+            } else if (compatible(variant.type, new_type) || compatible(new_type, variant.type)) {
+                error("An overload of compatible parameter already exists.");
+            }
+        }
+    );
 }
 
 /** Add a symbol into the symbol table
@@ -144,6 +153,7 @@ function declare(node, symbols, check_only) {
             error("Not implemented");
         },
         template : function () {
+            // TODO: handle overloading
             symbols[node.name] = {
                 type : {
                     kind : "template"
@@ -154,7 +164,10 @@ function declare(node, symbols, check_only) {
         },
         class : function () {
             // add myself to support recursion
-            symbols[node.name] = {
+            if (symbols[node.name].length > 0) {
+                error(node.name + "has been declared");
+            }
+            symbols[node.name][0] = {
                 type : {
                     kind : "class",
                 },
@@ -165,28 +178,41 @@ function declare(node, symbols, check_only) {
                     members : {},
                 },
             };
-            symbols[node.name] = evaluate(node, symbols, true);
+            symbols[node.name][0] = evaluate(node, symbols, true);
         },
         var : function () {
             // add myself to symbol table to support recursion
             // Return type must be specified for recursion
+            var type;
             if (node.type !== null) {
-                symbols[node.name] = {type : generate_function_type(node.parameters, resolve_type(node.type, symbols), symbols)};
+                type = generate_function_type(node.parameters, resolve_type(node.type, symbols), symbols);
+                symbols[node.name].push({type : type});
             }
-            // TODO: mutual recursion
-
-            // translate the declaration into a function expression
-            symbols[node.name] = evaluate(node, symbols, check_only);
+            // mutual recursion is currently not supported
+            var initialiser = evaluate(node, symbols, check_only);
+            if (type === undefined) {
+                type = initialiser.type;
+            } else {
+                symbols[node.name].pop();
+            }
+            check_overload(symbols, node.name, type);
+            symbols[node.name].push({type : type, value : initialiser.value});
         },
+    }
+    if (symbols[node.name] === undefined) {
+        symbols[node.name] = [];
     }
     method[node.node]();
 }
 
 /** Evaluate an AST node 
  * @param node
+ * @param symbols
+ * @param check_only Only check the type without evaluating
+ : @param argument_type Type of the argument for overloading
  * @return object A value node
  */
-function evaluate(node, symbols, check_only) {
+function evaluate(node, symbols, check_only, argument_type) {
     var evaluater = {
         program : function () {
             node.imports.forEach(
@@ -399,8 +425,8 @@ function evaluate(node, symbols, check_only) {
         },
         call : function () {
             // evaluate the arguments
-            var lhs = evaluate(node.function, symbols, check_only);
             var rhs = evaluate(node.argument, symbols, check_only);
+            var lhs = evaluate(node.function, symbols, check_only, rhs.type);
 
             // call the function
             var type = resolve_type(lhs.type, symbols);
@@ -427,7 +453,7 @@ function evaluate(node, symbols, check_only) {
                     var closure_symbols = copy_symbols(lhs.value.symbols);
                     var param = lhs.value.parameters[0];
                     var remaining_params = lhs.value.parameters.slice(1);
-                    closure_symbols[param.name] = {type : param.type, value : rhs.value};
+                    closure_symbols[param.name] = [{type : param.type, value : rhs.value}];
                     if (remaining_params.length === 0) {
                         return {
                             type : type.return,
@@ -463,9 +489,31 @@ function evaluate(node, symbols, check_only) {
         },
         identifier : function () {
             if (symbols[node.name] === undefined) {
-                error("Cannot resolve symbol " + node.name + " (a recursive function's return type must be declared for it to be resolved in the body)");
+                error("Cannot resolve symbol " + node.name);
             }
-            return copy_symbols(symbols[node.name]);
+            if (argument_type !== undefined) {
+                var ans;
+                symbols[node.name].forEach(
+                    function (variant) {
+                        if (variant.type.kind === 'template') {
+                            // TODO: handle template
+                        } else if (variant.type.kind === 'class') {
+                            error("Cannot call a class");
+                        } else if (variant.type.kind === 'function') {
+                            if (compatible(variant.type.parameter, argument_type)) {
+                                ans = copy_symbols(variant);
+                            }
+                        } else {
+                            ans = copy_symbols(variant);
+                        }
+                    }
+                );
+                if (ans === undefined) {
+                    error("Cannot resolve overload");
+                }
+                return ans;
+            }
+            return copy_symbols(symbols[node.name][0]);
         },
         this : function () {
             var ans = symbols['@this'];
@@ -479,7 +527,7 @@ function evaluate(node, symbols, check_only) {
             var parameters = node.parameters;
             parameters.forEach(
                 function (p) {
-                    closure_symbols[p.name] = {type : p.type, value : undefined};
+                    closure_symbols[p.name] = [{type : p.type, value : undefined}];
                 }
             );
             var body_type = evaluate(node.body, closure_symbols, true).type;
