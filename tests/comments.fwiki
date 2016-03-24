@@ -1,0 +1,12 @@
+//
+/* */
+/*/comment*/ 1
++ // comment
+/* This is a LOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOONG comment
+ * *********************************************************/
+2 + 
+/************/ 3
+/**** The result should be 6 *********/
+
+
+
