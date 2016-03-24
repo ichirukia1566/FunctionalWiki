@@ -40,7 +40,7 @@
 }
 
 program
-    = imports:import* declarations:declaration* expression:expression {
+    = _ imports:import* declarations:declaration* expression:expression {
         return {
             node : "program", 
             imports : imports, 
@@ -352,8 +352,8 @@ qualified_identifier
     }
 
 identifier
-    = [_a-zA-Z\xA0-\uFFFF][_a-zA-Z0-9\xA0-\uFFFF]* _ {
-        return text().trim();
+    = i:$ ([_a-zA-Z\xA0-\uFFFF][_a-zA-Z0-9\xA0-\uFFFF]*) _ {
+        return i;
     }
     / '@operator' _ op:('!' / '~' / '+' / '-' / '++' / '*' / '/' / '%' / '<<' / '>>'
         / '&' / '^' / '|' / '&&' / '||' / '==' / '!=' / '<' / '<=' / '>' / '>=') _ {
@@ -464,8 +464,16 @@ char
         }
     }
 
-_ "whitespace"
-    = [ \n\t\r\v]*
+_ = (comment / whitespace)*
+
+whitespace
+    = [ \n\t\r\v]
+
+comment
+    = '/*' comment_tail / '//' [^\n]* '\n'
+
+comment_tail
+    = '*/' / . comment_tail
 
 
 
