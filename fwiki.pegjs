@@ -1,17 +1,6 @@
 {
     function binary_operator(op, a, b) {
-        return {
-            node : "call",
-            function : {
-                node : "call",
-                function : {
-                    node : "identifier",
-                    name : op,
-                },
-                argument : a,
-            },
-            argument : b
-        };
+        return new Call(new Call(new Identifier(op), a), b);
     }
     
     function left_assoc(head, tail, callback) {
@@ -30,13 +19,8 @@
         if (template_parameters === null) {
             return node;
         } else {
-            var ans = {
-                node : "template",
-                name : node.name,
-                template_parameters : template_parameters,
-                content : node
-            };
-            delete node.name;
+            var ans = new Template(node.name, template_parameters, node);
+            node.name = null;
             return ans;
         }
     }
@@ -44,17 +28,12 @@
 
 program
     = _ imports:import* declarations:declaration* expression:expression {
-        return {
-            node : "program", 
-            imports : imports, 
-            declarations : declarations, 
-            expression : expression
-        }; 
+        return new Program(imports, declarations, expression);
     }
 
 import
     = "@import" _ from:qualified_identifier to:identifier? ";" _ { 
-        return {node : "import", from : from, to : to}; 
+        return new Import(from, to);
     }
 
 declaration
@@ -66,12 +45,7 @@ class_declaration
         name:identifier superclass:(":" _ type)? 
         "{" _ members:member_declaration* "}" _ { 
             return generate_template(
-                {
-                    node : "class", 
-                    name : name, 
-                    superclass : superclass === null ? null : superclass[2], 
-                    members:members
-                }
+                new Class(name, superclass === null ? null : superclass[2], members)
                 , t === null ? null : t[2]
             );
         }
@@ -81,13 +55,12 @@ variable_declaration
         name:identifier p:("(" _ parameter_list ")" _ )? type:(":" _ type)? 
         initialiser:initialiser { 
             return generate_template(
-                {
-                    node : "var", 
-                    name : name, 
-                    parameters : p === null ? [] : p[2],
-                    type : type === null ? null : type[2], 
-                    initialiser:initialiser
-                }
+                new Variable(
+                    name,
+                    p === null ? [] : p[2],
+                    type === null ? null : type[2], 
+                    initialiser
+                )
                 , t === null ? null : t[2]
             ); 
         }
@@ -95,13 +68,12 @@ variable_declaration
 member_declaration
     = "@var" _ name:identifier p:("(" _ parameter_list ")" _ )? ":" _ type:type 
         initialiser:(initialiser / (";" _ )) { 
-            return {
-                node : "var", 
-                name : name, 
-                type : type, 
-                parameters : p === null ? [] : p[2],
-                initialiser : initialiser instanceof Array ? null : initialiser
-            };
+            return new Variable(
+                name, 
+                p === null ? [] : p[2],
+                type, 
+                initialiser instanceof Array ? null : initialiser
+            );
         }
 
 initialiser
@@ -212,14 +184,7 @@ mult_expression
 unary_expression 
     = postfix_expression
     / op:("+" / "-" / "!" / "~") _ expr:unary_expression { 
-        return {
-            node : "call", 
-            function : {
-                node : "identifier",
-                name : op,
-            },
-            argument : expr,
-        }; 
+        return new Call(new Identifier(op), expr);
     }   
     
 postfix_expression
@@ -228,23 +193,17 @@ postfix_expression
             if (tail.length === 0) {
                 return head;
             } else {
-                return {
-                    node : "call",
-                    function : recursion(head, tail.slice(0, tail.length - 1)), 
-                    argument : tail[tail.length - 1]
-                };
+                return new Call(
+                    recursion(head, tail.slice(0, tail.length - 1))
+                    , tail[tail.length - 1]
+                );
             }
         }
         return recursion(head, tail);
     }
     / "@if" _ cond:template_member_expression then:template_member_expression 
         e:template_member_expression {
-            return {
-                node : "if",
-                condition : cond,
-                then : then,
-                else : e
-            };
+            return new If(cond, then, e);
         }
 
 member_update
@@ -277,23 +236,20 @@ template_member_expression
                 return head;
             } else {
                 if (tail[tail.length - 1][0] === '.') {
-                    return {
-                        node : "member", 
-                        object : recursion(head, tail.slice(0, tail.length - 1)),
-                        member : tail[tail.length - 1][2]
-                    };
+                    return new Member(
+                        recursion(head, tail.slice(0, tail.length - 1))
+                        , tail[tail.length - 1][2]
+                    );
                 } else if (tail[tail.length - 1][0] === '<') {
-                    return {
-                        node : "template_application",
-                        template : recursion(head, tail.slice(0, tail.length - 1)),
-                        arguments : tail[tail.length - 1][2]
-                    };
+                    return new TemplateApplication(
+                        recursion(head, tail.slice(0, tail.length - 1))
+                        , tail[tail.length - 1][2]
+                    );
                 } else {
-                    return {
-                        node : "update",
-                        object : recursion(head, tail.slice(0, tail.length - 1)),
-                        update : tail[tail.length - 1],
-                    };
+                    return new Update(
+                        recursion(head, tail.slice(0, tail.length - 1))
+                        , tail[tail.length - 1]
+                    );
                 }
             }
         }
@@ -302,14 +258,8 @@ template_member_expression
 
 atom
     = literal
-    / "@this" _ {
-        return {node : "this"};
-    }
     / i:identifier {
-        return {node : "identifier", name : i};
-    }
-    / t:built_in_type {
-        return {node : "built_in_type", type : t};
+        return new Identifier(i);
     }
     / '(' _ e:expression ')' _ {
         return e;
@@ -319,26 +269,21 @@ atom
 
 built_in_type
     = t:("@Character" / "@Integer" / "@Float" / "@Boolean") _ {
-        return built_in_type(t.substr(1));
+        return new TypeLiteral(NativeType[t.substr(1)]);
     }
 
 native_expression
     = '@native' _ '(' _ i:identifier ':' _ t:type ')' _ {
-        return {
-            node : "native",
-            native : i,
-            type : t
-        };
+        return new Native(i, t);
     }
 
 function_expression
     = '@function' _ p:('(' _ parameter_list ')'_ )? t:(':' _ type)? '{' _ e:program '}' _ {
-        return {
-            node : "function",
-            parameters : p === null ? [] : p[2],
-            type : t === null ? null : t[2],
-            body : e,
-        };
+        return new FunctionExpression(
+            p === null ? [] : p[2]
+            , t === null ? null : t[2]
+            , e
+        );
     }
     
 qualified_identifier
@@ -347,7 +292,7 @@ qualified_identifier
             i:identifier {return {source : "internal", path : [i]};}
             / s:string_literal {return {source : "external", path : [s.value]};}
         )
-    ) tail:("." _ identifier)+ {
+    ) tail:("."  identifier)+ {
         var ans = head[1];
         tail.forEach(
             function (o) {
@@ -372,10 +317,10 @@ identifier
 type = s:(
     built_in_type
     / m:template_member_expression {
-        return {kind : "identifier", qualified_id : m};
+        return new IdentifierTypeExpression(m);
     }
     / '[' _ t:type ']' _ {
-            return {kind : "array", array : t};
+        return new ArrayTypeExpression(t);
     }
     / '(' _ t:type ')' _ { return t; }
 )+ {
@@ -383,11 +328,7 @@ type = s:(
         if (s.length === 1) {
             return s[0];
         } else {
-            return {
-                kind : "function", 
-                parameter : s[0], 
-                return : recursion(s.slice(1))
-            };
+            return new FunctionTypeExpression(s[0], recursion(s.slice(1)));
         }
     }
     return recursion(s);
@@ -403,16 +344,19 @@ literal
 char_literal
     = "'" c:(char / '"') "'" _
         {
-            return {
-                node : "literal", 
-                type : built_in_type("Character"), 
-                value : c
-            };
+            return new Literal(
+                new Value(NativeType.Character, c)
+            );
         }
 
 string_literal
     = "\"" c:(char / "'")* "\"" _ {
-        return {node : "literal", type : built_in_type("String"), value : c.join('')};
+        return new Literal(
+            new Value(
+                new ArrayType(NativeType.Character)
+                , c
+            )
+        );
     }
 
 float_literal
@@ -420,21 +364,21 @@ float_literal
         ([0-9]+ "." [0-9]* / "." [0-9]+) ([eE] [+-]? [0-9]+)? 
         / [0-9]+_ [eE] [+-]? [0-9]+
     ) _ {
-        return {node : "literal", type : built_in_type("Float"), value : parseFloat(text())};
+        return new Literal(new Value(NativeType.Float, parseFloat(text())));
     }
     
 int_literal
     = ("0x"[0-9a-fA-F]+ / [0-9]+ ) _ {
-        return {node : "literal", type : built_in_type("Integer"), value : parseInt(text())};
+        return new Literal(new Value(NativeType.Integer, parseInt(text())));
     }
 
 array_literal
     = '[' _ es:(e:expression ',' _ {return e;})* ']' _ {
-        return {node : "array", elements : es};
+        return new ArrayLiteral(es);
     }
     / '[' _ head:(e:expression ',' _ {return e;})* tail:expression ']' _ {
         head.push(tail);
-        return {node : "array", elements : head};
+        return new ArrayLiteral(head);
     }
 
 char
@@ -479,10 +423,9 @@ whitespace
     = [ \n\t\r\v]
 
 comment
-    = '/*' comment_tail / '//' [^\n]* '\n'
+    = '/*' comment_tail / '//' [^\n]* ('\n' / EOF)
 
 comment_tail
     = '*/' / . comment_tail
 
-
-
+EOF = !.

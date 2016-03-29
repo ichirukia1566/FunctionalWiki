@@ -5,4 +5,3 @@
 @var @operator*(lhs : @Integer, rhs : @Integer) : @Integer = @native(times : @Integer);
 @var @operator>(lhs : @Integer, rhs : @Integer) : @Boolean = @native(greater : @Boolean);
 @var @operator>=(lhs : @Integer, rhs : @Integer) : @Boolean = @native(greater_equal : @Boolean);
-

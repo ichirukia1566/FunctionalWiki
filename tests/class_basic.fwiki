@@ -1,7 +1,10 @@
 @class Test {
     @var a : @Integer = 3;
-    @var b : @Integer = @this.a + 1;
-    @var f(x : @Integer) : @Integer = @this.a + x;
+    @var b : @Integer = 4;
+    @var f(x : @Integer) : @Integer = x + 1;
 }
 
-Test{a = 5}{a = 7}.f 1
+@function {
+    @var t = Test {a = 5} {a = 7};
+    t.f (t.a + t.b)
+}
