@@ -218,12 +218,8 @@ function Program(imports, declarations, expression, loc) {
     this.expression = expression;
     this.location = loc;
 }
-Program.prototype = Object.create(Declaration.prototype);
+Program.prototype = Object.create(Expression.prototype);
 Program.prototype.evaluate = function (symbols, check_only) {
-    this.declare(symbols, check_only);
-    return this.expression.evaluate(symbols, check_only);
-};
-Program.prototype.declare = function (symbols, check_only) {
     this.imports.forEach(
         function (child) {
             child.declare(symbols, check_only);
@@ -234,8 +230,8 @@ Program.prototype.declare = function (symbols, check_only) {
             child.declare(symbols, check_only);
         }
     );
-    return symbols;
-}
+    return this.expression.evaluate(symbols, check_only);
+};
 
 function Update(object, update, loc) {
     this.object = object;

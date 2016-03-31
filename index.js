@@ -1,8 +1,23 @@
 function run() {
     document.getElementById("output").value = ""; // clear the text area first
     try {
-        var std = parser.parse(document.getElementById("std").value).declare(Object.create(null))
-        var result = parser.parse(document.getElementById("code").value).evaluate(std);
+        var std 
+            = parser.parse(document.getElementById("std").value, {startRule : "program"});
+        var symbols = Object.create(null);
+        std.evaluate(symbols);
+        var text
+            = parser.parse(document.getElementById("code").value);
+        var result = "";
+        text.forEach(
+            function (section) {
+                if (section instanceof Expression) {
+                    result += section.evaluate(symbols);
+                } else {
+                    result += section;
+                }
+            }
+        );
+         
         document.getElementById("output").value = result;
     } catch (e) {
         if (e.name === "SyntaxError" || e.name === "InterpreterError") {

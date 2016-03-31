@@ -28,6 +28,10 @@
     }
 }
 
+head = ('#code#' p:program '#end#' { return p; }/ passthrough)*
+
+passthrough = $(!'#code#' .)
+
 program
     = _ imports:import* declarations:declaration* expression:expression {
         return new Program(imports, declarations, expression, location());
@@ -410,9 +414,7 @@ array_literal
     }
 
 char
-    = (! ('\\' / '"' / "'")) . {
-        return text();
-    }
+    = $ (! ('\\' / '"' / "'")) .
     / "\\" tail:(
         [bfnrtv\\'"] 
         / u:([0-7] / [0-7][0-7] / [0-3][0-7][0-7]) {
