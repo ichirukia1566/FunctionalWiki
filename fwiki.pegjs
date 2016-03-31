@@ -10,7 +10,7 @@
         } else {
             return binary_operator(
                 tail[tail.length - 1][0]
-                , left_assoc(head, tail.slice(0, tail.length - 1))
+                , left_assoc(head, tail.slice(0, tail.length - 1), loc)
                 , tail[tail.length - 1][2]
                 , loc
             );
@@ -185,7 +185,7 @@ unary_expression
     }   
     
 postfix_expression
-    = head:template_member_expression tail:template_member_expression* {
+    = head:member_expression tail:member_expression* {
         function recursion(head, tail) {
             if (tail.length === 0) {
                 return head;
@@ -217,11 +217,10 @@ member_assignment
         return {name : i, value : e};
     }
     
-template_member_expression
+member_expression
     = head:atom tail:
         (
             '.' _ identifier
-            / '<' _ template_arguments_list '>' _
             / member_update
         )* 
     {
@@ -231,12 +230,6 @@ template_member_expression
             } else {
                 if (tail[tail.length - 1][0] === '.') {
                     return new Member(
-                        recursion(head, tail.slice(0, tail.length - 1))
-                        , tail[tail.length - 1][2]
-                        , location()
-                    );
-                } else if (tail[tail.length - 1][0] === '<') {
-                    return new TemplateApplication(
                         recursion(head, tail.slice(0, tail.length - 1))
                         , tail[tail.length - 1][2]
                         , location()
@@ -253,11 +246,17 @@ template_member_expression
         return recursion(head, tail);
     }
 
-atom
-    = literal
-    / i:identifier {
+template_application 
+    = i:identifier '<' _ t:template_arguments_list '>' _ {
+        return new TemplateApplication(new Identifier(i, location()), t, location());
+    }
+    / i:identifier { 
         return new Identifier(i, location());
     }
+
+atom
+    = literal
+    / template_application
     / '(' _ e:expression ')' _ {
         return e;
     }
@@ -343,7 +342,7 @@ type = s:(
         return new ArrayTypeExpression(t, location());
     }
     / '(' _ t:type ')' _ { return t; }
-    / m:template_member_expression {
+    / m:member_expression {
         return new IdentifierTypeExpression(m, location());
     }
 )+ {
@@ -393,7 +392,7 @@ float_literal
     }
     
 int_literal
-    = ("0x"[0-9a-fA-F]+ / [1-9][0-9]* / 0 ) _ {
+    = ("0x"[0-9a-fA-F]+ / [1-9][0-9]* / '0' ) _ {
         var value = parseInt(text());
         if ((value | 0) !== value) {
             error("Integer literal out of bound");

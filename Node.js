@@ -440,10 +440,11 @@ function FunctionExpression(parameters, type, body, loc) {
 }
 FunctionExpression.prototype = Object.create(Expression.prototype);
 FunctionExpression.prototype.evaluate = function (symbols, check_only) {
+    var node = this;
     function get_return_type(declared, actual) {
         if (declared !== null) {
             if (!actual.compatibleWith(declared)) {
-                this.error(
+                node.error(
                     "Type of function body " + actual 
                     + " does not match declared type " + declared
                 );
