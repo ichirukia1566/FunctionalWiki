@@ -21,12 +21,16 @@
 // comparison
 @var @operator>(lhs : @Integer, rhs : @Integer) = @native(greater : @Boolean);
 @var @operator>(lhs : @Float, rhs : @Float) = @native(greater : @Boolean);
+@var @operator>(lhs : @Character, rhs : @Character) = @native(greater : @Boolean);
 @var @operator>=(lhs : @Integer, rhs : @Integer) = @native(greater_equal : @Boolean);
 @var @operator>=(lhs : @Float, rhs : @Float) = @native(greater_equal : @Boolean);
+@var @operator>=(lhs : @Character, rhs : @Character) = @native(greater_equal : @Boolean);
 @var @operator<(lhs : @Integer, rhs : @Integer) = @native(less : @Boolean);
 @var @operator<(lhs : @Float, rhs : @Float) = @native(less : @Boolean);
+@var @operator<(lhs : @Character, rhs : @Character) = @native(less : @Boolean);
 @var @operator<=(lhs : @Integer, rhs : @Integer) = @native(less_equal : @Boolean);
 @var @operator<=(lhs : @Float, rhs : @Float) = @native(less_equal : @Boolean);
+@var @operator<=(lhs : @Character, rhs : @Character) = @native(less_equal : @Boolean);
 @var @operator==(lhs : @Integer, rhs : @Integer) = @native(equal : @Boolean);
 @var @operator==(lhs : @Float, rhs : @Float) = @native(equal : @Boolean);
 @var @operator==(lhs : @Boolean, rhs : @Boolean) = @native(equal : @Boolean);
