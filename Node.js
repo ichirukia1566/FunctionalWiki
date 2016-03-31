@@ -157,19 +157,19 @@ Variable.prototype.evaluate = function (symbols, check_only) {
     symbols = copy_symbols(symbols);
     var type;
     if (this.name !== null && this.type !== null) {
-        type = generate_function_type(
-            this.parameters.map(
-                function (p) {
-                    return p.type.evaluate(symbols);
-                }
-            )
-            , this.type.evaluate(symbols)
-        );
-        check_overload(symbols, this, type);
-        if (symbols[this.name] === undefined) {
-            symbols[this.name] = [];
-        }
-        symbols[this.name].push(new Value(type, undefined));
+         type = generate_function_type(
+             this.parameters.map(
+                 function (p) {
+                     return p.type.evaluate(symbols);
+                 }
+             )
+             , this.type.evaluate(symbols)
+         );
+         check_overload(symbols, this, type);
+         if (symbols[this.name] === undefined) {
+             symbols[this.name] = [];
+         }
+         symbols[this.name].push(new Value(type, undefined));
     }
     // transform to function expression
     // mutual recursion is currently not supported
@@ -454,6 +454,8 @@ FunctionExpression.prototype.evaluate = function (symbols, check_only) {
         }
     }
     var type = this.type === null ? null : this.type.evaluate(symbols);
+    // A function is a scope
+    symbols = copy_symbols(symbols);
     switch (this.parameters.length) {
       case 0:
         var ans = this.body.evaluate(symbols, check_only);
@@ -580,6 +582,7 @@ function Member(object, member, loc) {
     this.member = member;
     this.location = loc;
 }
+
 Member.prototype = Object.create(Expression.prototype);
 Member.prototype.evaluate = function (symbols, check_only) {
     var object = this.object.evaluate(symbols, check_only);
@@ -655,4 +658,4 @@ ErrorExpression.prototype.evaluate = function (symbols, check_only) {
     } else {
         return new Value(new ErrorType(), undefined);
     }
-}
+};

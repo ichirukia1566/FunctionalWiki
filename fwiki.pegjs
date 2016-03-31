@@ -134,11 +134,8 @@ parameter
     }
 
 expression 
-    = code_expression
-    
-code_expression
     = bor_expression
-
+    
 bor_expression 
     = head:xor_expression tail:('|' _ xor_expression)* { 
         return left_assoc(head, tail, location());
@@ -396,7 +393,7 @@ float_literal
     }
     
 int_literal
-    = ("0x"[0-9a-fA-F]+ / [0-9]+ ) _ {
+    = ("0x"[0-9a-fA-F]+ / [1-9][0-9]* / 0 ) _ {
         var value = parseInt(text());
         if ((value | 0) !== value) {
             error("Integer literal out of bound");
