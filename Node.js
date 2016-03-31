@@ -641,7 +641,7 @@ Cast.prototype.evaluate = function (symbols, check_only) {
     } else {
         return new Value(
             type
-            , object.value['@class'].compatibleWith(type) ? object.value : default_object.value
+            , object.value['@class'].compatibleWith(type) ? object.value : this.default.evaluate(symbols)
         );
     }
 }
