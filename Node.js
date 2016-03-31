@@ -16,28 +16,29 @@ function copy_symbols(symbols) {
     return copy;
 }
 
-/** Ensure_that new_type is overloadable on name in symbols
+/** Ensure_that node is overloadable on symbols if it has new_type 
  */
-function check_overload(symbols, name, new_type) {
+function check_overload(symbols, node, new_type) {
+    var name = node.name;
     if (symbols[name] !== undefined) {
         if (!(new_type instanceof FunctionType)) {
-            this.error("Cannot overload a non-function");
+            node.error("Cannot overload a non-function");
         }
         symbols[name].forEach(
             function (variant) {
                 if (variant instanceof ClassType) {
-                    this.error(name + " has already been declared as a class");
+                    node.error(name + " has already been declared as a class");
                 } else if (variant instanceof Template) {
-                    this.error(name + " has already been declared as a template");
+                    node.error(name + " has already been declared as a template");
                 } else if (variant.type instanceof FunctionType) {
                     if (
                         variant.type.parameter.compatibleWith(new_type.parameter)
                         || new_type.parameter.compatibleWith(variant.type.parameter)
                     ) {
-                        this.error("An overload of compatible parameter already exists.");
+                        node.error("An overload of compatible parameter already exists.");
                     }
                 } else {
-                    this.error("Cannot overload a non-function");
+                    node.error("Cannot overload a non-function");
                 }
             }
         );
@@ -164,7 +165,7 @@ Variable.prototype.evaluate = function (symbols, check_only) {
             )
             , this.type.evaluate(symbols)
         );
-        check_overload(symbols, this.name, type);
+        check_overload(symbols, this, type);
         if (symbols[this.name] === undefined) {
             symbols[this.name] = [];
         }
@@ -182,7 +183,7 @@ Variable.prototype.evaluate = function (symbols, check_only) {
 };
 Variable.prototype.declare = function (symbols, check_only) {
     var initialiser = this.evaluate(symbols, check_only);
-    check_overload(symbols, this.name, initialiser.type);
+    check_overload(symbols, this, initialiser.type);
     if (symbols[this.name] === undefined) {
         symbols[this.name] = [initialiser];
     } else {
@@ -217,20 +218,24 @@ function Program(imports, declarations, expression, loc) {
     this.expression = expression;
     this.location = loc;
 }
-Program.prototype = Object.create(Expression.prototype);
+Program.prototype = Object.create(Declaration.prototype);
 Program.prototype.evaluate = function (symbols, check_only) {
+    this.declare(symbols, check_only);
+    return this.expression.evaluate(symbols, check_only);
+};
+Program.prototype.declare = function (symbols, check_only) {
     this.imports.forEach(
         function (child) {
-            child.declare(symbols);
+            child.declare(symbols, check_only);
         }
     );
     this.declarations.forEach(
         function (child) {
-            child.declare(symbols);
+            child.declare(symbols, check_only);
         }
     );
-    return this.expression.evaluate(symbols, check_only);
-};
+    return symbols;
+}
 
 function Update(object, update, loc) {
     this.object = object;
@@ -362,6 +367,7 @@ ArrayLiteral.prototype.evaluate = function (symbols, check_only) {
     var element_type = this.elements.length 
         ? this.elements[0].evaluate(symbols, check_only).type 
         : undefined;
+    var node = this;
     var value = this.elements.map(
         function (e) {
             var object = e.evaluate(symbols, check_only);
@@ -369,7 +375,7 @@ ArrayLiteral.prototype.evaluate = function (symbols, check_only) {
                 if (element_type.compatibleWith(object.type)) {
                     element_type = object.type;
                 } else {
-                    this.error("Array literal contains inconsistent types");
+                    node.error("Array literal contains inconsistent types: " + element_type + " and " + object.type);
                 }
             }
             return object.value;
@@ -423,6 +429,9 @@ Identifier.prototype.evaluate
         }
         if (!check_only && ans instanceof Value && ans.value === undefined) {
             this.error(this.name + " is not yet completely initialised");
+        }
+        if (!type_acceptable && !(ans instanceof Value)) {
+            this.error("Non-value " + this.name + " used in value context");
         }
         return ans;
     };
@@ -526,7 +535,7 @@ Native.prototype = Object.create(Expression.prototype);
 Native.prototype.evaluate = function (symbols, check_only) {
     return new Value(
         this.type.evaluate(symbols)
-        , check_only ? undefined : natives[this.name](symbols)
+        , check_only ? undefined : natives[this.name](symbols, this.location)
     );
 };
 
@@ -546,13 +555,13 @@ TemplateApplication.prototype.evaluate = function (symbols, check_only) {
      );
      var template;
      if (args.length === 1) {
-         template = this.template.evaluate(symbols, check_only, args[0]);
+         template = this.template.evaluate(symbols, check_only, args[0], true);
          // use template application to select overload
          if (template instanceof Value && template.type instanceof FunctionType) {
              return template;
          }
      } else {
-         template = this.template.evaluate(symbols, check_only);
+         template = this.template.evaluate(symbols, check_only, undefined, true);
      }
      // put the template arguments into the parameters
      if (template instanceof Template) {

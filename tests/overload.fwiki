@@ -3,4 +3,4 @@
 @var hello(x : @Boolean) : @Boolean = true;
 
 @var c = hello<@Character>;
-(@if (hello false) (hello 2 + hello 'a') 999) * c 'x' // should be 15
+@if (hello false, hello 2 + hello 'a', 999) * c 'x' // should be 15

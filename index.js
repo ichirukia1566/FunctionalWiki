@@ -1,8 +1,8 @@
 function run() {
     document.getElementById("output").value = ""; // clear the text area first
     try {
-        var ast = parser.parse(document.getElementById("code").value);
-        var result = ast.evaluate(Object.create(null));
+        var std = parser.parse(document.getElementById("std").value).declare(Object.create(null))
+        var result = parser.parse(document.getElementById("code").value).evaluate(std);
         document.getElementById("output").value = result;
     } catch (e) {
         if (e.name === "SyntaxError" || e.name === "InterpreterError") {

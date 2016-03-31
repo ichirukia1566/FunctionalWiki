@@ -133,17 +133,7 @@ expression
     = code_expression
     
 code_expression
-    = or_expression
-
-or_expression 
-    = head:and_expression tail:('||' _ and_expression)* { 
-        return left_assoc(head, tail, location());
-    }
-
-and_expression 
-    = head:bor_expression tail:('&&' _ bor_expression)* { 
-        return left_assoc(head, tail, location());
-    }
+    = bor_expression
 
 bor_expression 
     = head:xor_expression tail:('|' _ xor_expression)* { 
@@ -176,7 +166,7 @@ shift_expression
     }
 
 add_expression 
-    = head:mult_expression tail:(("+" / "-" / "++") _ mult_expression)* { 
+    = head:mult_expression tail:(("+" / "-") _ mult_expression)* { 
         return left_assoc(head, tail, location());
     }
 
@@ -187,7 +177,9 @@ mult_expression
 
 unary_expression 
     = postfix_expression
-    / op:("+" / "-" / "!" / "~") _ expr:unary_expression { 
+    / op:("+" / "-" / "~") _ expr:unary_expression { 
+        if (op == "+") op = "++";
+        if (op == "-") op = "--";
         return new Call(new Identifier(op, location()), expr, location());
     }   
     
@@ -276,23 +268,23 @@ atom
     / error_expression
 
 if_expression
-    = "@if" _ '(' cond:expression ',' _ then:expression ',' _
+    = "@if" _ '(' _ cond:expression ',' _ then:expression ',' _
         e:expression ')' _ {
             return new If(cond, then, e, location());
         }
 
 instance_expression
-    = "@instance" _ '(' object:expression ',' _ type:type ')' _ {
+    = "@instance" _ '(' _ object:expression ',' _ type:type ')' _ {
         return new Instance(object, type, location());
     }
 
 cast_expression
-    = "@cast" _ '(' object:expression ',' _ type:type ',' _ e:expression')' _ {
+    = "@cast" _ '(' _ object:expression ',' _ type:type ',' _ e:expression')' _ {
         return new Cast(object, type, e, location());
     }
 
 error_expression
-    = "@error" _ '(' message:string_literal ')' _ {
+    = "@error" _ '(' _ message:string_literal ')' _ {
         return new ErrorExpression(message.object.value.join(""), location());
     }
 
@@ -337,8 +329,8 @@ identifier
         return i;
     }
     / '@operator' _ op:(
-        '++' / '+' / '-' / '*' / '/' / '%'
-        / '&&' / '||' / '&' / '^' / '|' / '!' / '~' / '<<' / '>>'
+        '++' / '--' / '+' / '-' / '*' / '/' / '%'
+        / '&' / '^' / '|' / '~' / '<<' / '>>'
         / '==' / '!=' / '<=' / '<' / '>=' / '>'
     ) _ {
         return op;
@@ -346,13 +338,13 @@ identifier
 
 type = s:(
     built_in_type
-    / m:template_member_expression {
-        return new IdentifierTypeExpression(m, location());
-    }
     / '[' _ t:type ']' _ {
         return new ArrayTypeExpression(t, location());
     }
     / '(' _ t:type ')' _ { return t; }
+    / m:template_member_expression {
+        return new IdentifierTypeExpression(m, location());
+    }
 )+ {
     function recursion(s) {
         if (s.length === 1) {
@@ -401,7 +393,11 @@ float_literal
     
 int_literal
     = ("0x"[0-9a-fA-F]+ / [0-9]+ ) _ {
-        return new Literal(new Value(NativeType.Integer, parseInt(text())), location());
+        var value = parseInt(text());
+        if ((value | 0) !== value) {
+            error("Integer literal out of bound");
+        }
+        return new Literal(new Value(NativeType.Integer, value, location()));
     }
 
 array_literal

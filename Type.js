@@ -10,7 +10,7 @@ function assert(condition, message) {
 function Type() {}
 Type.prototype = {
     print : function (value) {
-        return value.toString();
+        return JSON.stringify(value);
     }
 };
 

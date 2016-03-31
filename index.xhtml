@@ -11,14 +11,96 @@
     <script src="index.js"/>
   </head>
   <body>
-    <textarea id="code" cols="80" rows="25"><![CDATA[@var true = @native(true : @Boolean);
+    <textarea id="std" cols="80" rows="25" style="display: none;"><![CDATA[// Boolean constants
+@var true = @native(true : @Boolean);
 @var false = @native(false : @Boolean);
+
+// Math operators
+@var @operator++(x : @Integer) = @native(noop : @Integer);
+@var @operator++(x : @Float) = @native(noop : @Float);
+@var @operator--(x : @Integer) = @native(negate : @Integer);
+@var @operator--(x : @Float) = @native(negate : @Float);
 @var @operator+(lhs : @Integer, rhs : @Integer) : @Integer = @native(plus : @Integer);
+@var @operator+(lhs : @Float, rhs : @Float) : @Float = @native(plus : @Float);
 @var @operator-(lhs : @Integer, rhs : @Integer) : @Integer = @native(minus : @Integer);
+@var @operator-(lhs : @Float, rhs : @Float) : @Float = @native(minus : @Float);
 @var @operator*(lhs : @Integer, rhs : @Integer) : @Integer = @native(times : @Integer);
-@var @operator>(lhs : @Integer, rhs : @Integer) : @Boolean = @native(greater : @Boolean);
-@var @operator>=(lhs : @Integer, rhs : @Integer) : @Boolean = @native(greater_equal : @Boolean);
-]]></textarea>
+@var @operator*(lhs : @Float, rhs : @Float) : @Float = @native(times : @Float);
+@var @operator/(lhs : @Float, rhs : @Float) : @Float = @native(over : @Float);
+@var @operator%(lhs : @Integer, rhs : @Integer) : @Integer = @native(mod : @Integer);
+@var @operator%(lhs : @Float, rhs : @Float) : @Float = @native(mod : @Float);
+@var isnan(x : @Float) = @native(isnan : @Float);
+
+// comparison
+@var @operator>(lhs : @Integer, rhs : @Integer) = @native(greater : @Boolean);
+@var @operator>(lhs : @Float, rhs : @Float) = @native(greater : @Boolean);
+@var @operator>=(lhs : @Integer, rhs : @Integer) = @native(greater_equal : @Boolean);
+@var @operator>=(lhs : @Float, rhs : @Float) = @native(greater_equal : @Boolean);
+@var @operator<(lhs : @Integer, rhs : @Integer) = @native(less : @Boolean);
+@var @operator<(lhs : @Float, rhs : @Float) = @native(less : @Boolean);
+@var @operator<=(lhs : @Integer, rhs : @Integer) = @native(less_equal : @Boolean);
+@var @operator<=(lhs : @Float, rhs : @Float) = @native(less_equal : @Boolean);
+@var @operator==(lhs : @Integer, rhs : @Integer) = @native(equal : @Boolean);
+@var @operator==(lhs : @Float, rhs : @Float) = @native(equal : @Boolean);
+@var @operator==(lhs : @Boolean, rhs : @Boolean) = @native(equal : @Boolean);
+@var @operator==(lhs : @Character, rhs : @Character) = @native(equal : @Boolean);
+@var @operator!=(lhs : @Integer, rhs : @Integer) = @native(not_equal : @Boolean);
+@var @operator!=(lhs : @Float, rhs : @Float) = @native(not_equal : @Boolean);
+@var @operator!=(lhs : @Boolean, rhs : @Boolean) = @native(not_equal : @Boolean);
+@var @operator!=(lhs : @Character, rhs : @Character) = @native(not_equal : @Boolean);
+
+// Type conversions
+@var boolean(x : @Boolean) = x;
+@var boolean(x : @Integer) = x != 0;
+@var boolean(x : @Float) = @native(test_float : @Boolean);
+@var boolean(x : @Character) = x != '\0';
+
+@var integer(x : @Boolean) = @if(x, 1, 0);
+@var integer(x : @Integer) = x;
+@var integer(x : @Float) = @native(trunc : @Integer);
+@var integer(x : @Character) = @native(ord : @Integer);
+
+@var float(x : @Integer) = @native(noop : @Float);
+@var float(x : @Float) = x;
+
+@var character(x : @Integer) = @native(chr : @Character);
+@var character(x : @Character) = x;
+
+// bitwise
+@var @operator&(lhs : @Integer, rhs : @Integer) : @Integer = @native(and : @Integer);
+@var @operator^(lhs : @Integer, rhs : @Integer) : @Integer = @native(xor : @Integer);
+@var @operator|(lhs : @Integer, rhs : @Integer) : @Integer = @native(or : @Integer);
+@var @operator~(x : @Integer) : @Integer = @native(not : @Integer);
+@var @operator<<(lhs : @Integer, rhs : @Integer) : @Integer = @native(shift_left : @Integer);
+@var @operator>>(lhs : @Integer, rhs : @Integer) : @Integer = @native(shift_right : @Integer);
+
+@var @operator&(lhs : @Boolean, rhs : @Boolean) : @Boolean = boolean (integer lhs & integer rhs);
+@var @operator^(lhs : @Boolean, rhs : @Boolean) : @Boolean = boolean (integer lhs ^ integer rhs);
+@var @operator|(lhs : @Boolean, rhs : @Boolean) : @Boolean = boolean (integer lhs | integer rhs);
+@var @operator~(x : @Boolean) = @if(x, false, true);
+
+// Array functions
+@var<T> length(x : [T]) : @Integer = @native(length : @Integer);
+@var<T> join(x : [T], y : [T]) : [T] = @native(join : [T]);
+@var<T> subarray(x : [T], start : @Integer, end : @Integer) {
+    @var l = length<T> x;
+    @if (
+        start < 0
+        , @error("Start cannot be negative")
+        , @if (
+            end > length<T> x
+            , @error("End out of bound")
+            , @if (
+                start > end
+                , @error("Start cannot be larger than end")
+                , @native(subarray : [T])
+            )
+        )
+    )
+}
+
+0]]></textarea>
+    <textarea id="code" cols="80" rows="25" />
     <br/>
     <textarea readonly="readonly" id="output" cols = "80" rows="25"/>
     <button onclick="run();">Run!</button>

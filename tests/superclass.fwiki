@@ -9,4 +9,4 @@
 @var test(x : Base) = x.base * 10;
 @var d : Derived = Derived {base = 5; derived = Base {base = 3}};
 
-test d
+test d + integer @instance(d, Base) // 51
