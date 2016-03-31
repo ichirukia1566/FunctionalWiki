@@ -5,20 +5,16 @@ function run() {
         var result = ast.evaluate(Object.create(null));
         document.getElementById("output").value = result;
     } catch (e) {
-        if (e.name === "SyntaxError") {
+        if (e.name === "SyntaxError" || e.name === "InterpreterError") {
             alert(
-                "Syntax Error:\n"
+                e.name
+                + ": \n"
                 + e.message 
                 + "\n"
                 + "at line " 
                 + e.location.start.line 
                 + " column " 
                 + e.location.start.column
-            );
-        } else if (e.name === "InterpreterError") {
-            alert(
-                "Interpreter Error:\n"
-                + e.message
             );
         } else {
             throw e;

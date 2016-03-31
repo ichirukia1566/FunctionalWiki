@@ -18,8 +18,6 @@
 @var @operator*(lhs : @Integer, rhs : @Integer) : @Integer = @native(times : @Integer);
 @var @operator>(lhs : @Integer, rhs : @Integer) : @Boolean = @native(greater : @Boolean);
 @var @operator>=(lhs : @Integer, rhs : @Integer) : @Boolean = @native(greater_equal : @Boolean);
-@var factorial(n : @Integer) : @Integer = @if (n > 0) (n * factorial(n - 1)) 1;
-factorial 6
 ]]></textarea>
     <br/>
     <textarea readonly="readonly" id="output" cols = "80" rows="25"/>

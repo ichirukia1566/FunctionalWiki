@@ -14,6 +14,15 @@ Type.prototype = {
     }
 };
 
+function ErrorType() {
+    this.name = "@error";
+}
+ErrorType.prototype = Object.create(Type.prototype);
+ErrorType.prototype.compatibleWith
+    = function () {
+        return true;
+    };
+
 function NativeType(name) {
     this.name = name;
 }
@@ -159,12 +168,20 @@ ClassType.prototype.getAllMembers = function () {
     return base;
 }
 
-function TypeExpression() {}
-TypeExpression.prototype = {};
+function Node() {}
+Node.prototype = {
+    error : function (message) {
+        throw new InterpreterError(message, this.location);
+    }
+};
 
-function TypeLiteral(type) {
+function TypeExpression() {}
+TypeExpression.prototype = Node.prototype;
+
+function TypeLiteral(type, loc) {
     assert(type instanceof Type);
     this.type = type;
+    this.location = loc;
 }
 TypeLiteral.prototype = Object.create(TypeExpression.prototype);
 TypeLiteral.prototype.evaluate = function () {
@@ -174,9 +191,10 @@ TypeLiteral.prototype.toString = function () {
     return this.type.toString();
 }
 
-function ArrayTypeExpression(elements) {
+function ArrayTypeExpression(elements, loc) {
     assert(elements instanceof TypeExpression);
     this.elements = elements;
+    this.location = loc;
 }
 ArrayTypeExpression.prototype = Object.create(TypeExpression.prototype);
 ArrayTypeExpression.prototype.evaluate = function (symbols) {
@@ -184,10 +202,11 @@ ArrayTypeExpression.prototype.evaluate = function (symbols) {
 };
 ArrayTypeExpression.prototype.toString = ArrayType.prototype.toString;
 
-function FunctionTypeExpression(parameter, r) {
+function FunctionTypeExpression(parameter, r, loc) {
     assert(parameter instanceof TypeExpression && r instanceof TypeExpression);
     this.parameter = parameter;
     this.return = r;
+    this.location = loc;
 }
 FunctionTypeExpression.prototype = Object.create(TypeExpression.prototype);
 FunctionTypeExpression.prototype.evaluate = function (symbols) {
@@ -195,14 +214,15 @@ FunctionTypeExpression.prototype.evaluate = function (symbols) {
 };
 FunctionTypeExpression.prototype.toString = FunctionType.prototype.toString;
 
-function IdentifierTypeExpression(qualified_id) {
+function IdentifierTypeExpression(qualified_id, loc) {
     this.name = qualified_id;
+    this.location = loc;
 }
 IdentifierTypeExpression.prototype = Object.create(TypeExpression.prototype);
 IdentifierTypeExpression.prototype.evaluate = function (symbols) {
     var ans = this.name.evaluate(symbols, true, undefined, true);
     if (!(ans instanceof Type)) {
-        error(this + " does not resolve to a type");
+        this.error(this + " does not resolve to a type");
     }
     return ans;
 };

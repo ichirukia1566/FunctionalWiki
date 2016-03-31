@@ -1,7 +1,30 @@
+// Boolean constants
 @var true = @native(true : @Boolean);
 @var false = @native(false : @Boolean);
+
+// Math operators
 @var @operator+(lhs : @Integer, rhs : @Integer) : @Integer = @native(plus : @Integer);
 @var @operator-(lhs : @Integer, rhs : @Integer) : @Integer = @native(minus : @Integer);
 @var @operator*(lhs : @Integer, rhs : @Integer) : @Integer = @native(times : @Integer);
 @var @operator>(lhs : @Integer, rhs : @Integer) : @Boolean = @native(greater : @Boolean);
 @var @operator>=(lhs : @Integer, rhs : @Integer) : @Boolean = @native(greater_equal : @Boolean);
+
+// Array functions
+@var<T> length(x : [T]) : @Integer = @native(length : @Integer);
+@var<T> join(x : [T], y : [T]) : [T] = @native(join : [T]);
+@var<T> subarray(x : [T], start : @Integer, end : @Integer) {
+    @var l = length<T> x;
+    @if (
+        start < 0
+        , @error("Start cannot be negative")
+        @if (
+            end > length<T> x
+            , @error("End out of bound")
+            , @if (
+                start > end
+                , @error("Start cannot be larger than end")
+                , @native(subarray : [T])
+            )
+        )
+    )
+}

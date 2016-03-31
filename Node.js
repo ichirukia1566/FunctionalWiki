@@ -21,23 +21,23 @@ function copy_symbols(symbols) {
 function check_overload(symbols, name, new_type) {
     if (symbols[name] !== undefined) {
         if (!(new_type instanceof FunctionType)) {
-            error("Cannot overload a non-function");
+            this.error("Cannot overload a non-function");
         }
         symbols[name].forEach(
             function (variant) {
                 if (variant instanceof ClassType) {
-                    error(name + " has already been declared as a class");
+                    this.error(name + " has already been declared as a class");
                 } else if (variant instanceof Template) {
-                    error(name + " has already been declared as a template");
-                } else if (variant instanceof Value && variant.type instanceof FunctionType) {
+                    this.error(name + " has already been declared as a template");
+                } else if (variant.type instanceof FunctionType) {
                     if (
                         variant.type.parameter.compatibleWith(new_type.parameter)
                         || new_type.parameter.compatibleWith(variant.type.parameter)
                     ) {
-                        error("An overload of compatible parameter already exists.");
+                        this.error("An overload of compatible parameter already exists.");
                     }
                 } else {
-                    error("Cannot overload a non-function");
+                    this.error("Cannot overload a non-function");
                 }
             }
         );
@@ -45,19 +45,16 @@ function check_overload(symbols, name, new_type) {
 }
 
 
-function InterpreterError(message) {
+function InterpreterError(message, loc) {
     this.name = "InterpreterError";
     this.message = message;
+    this.location = loc;
 }
 InterpreterError.prototype = Object.create(Error.prototype);
 
-function error(message) {
-    throw new InterpreterError(message);
-}
-
-function NotImplementedException() {
-    Error.apply(this, arguments);
+function NotImplementedException(message) {
     this.name = "NotImplementedException";
+    this.message = message;
 }
 NotImplementedException.prototype = Object.create(Error.prototype);
 
@@ -71,25 +68,24 @@ function generate_function_type(parameter_types, type) {
     );
 }
 
-function Node() {}
-Node.prototype = {};
-
 function Declaration() {}
 Declaration.prototype = Object.create(Node.prototype);
 
-function Import(from, to) {
+function Import(from, to, loc) {
     this.from = from;
     this.to = to;
+    this.location = loc;
 }
 Import.prototype = Object.create(Declaration.prototype);
 Import.prototype.declare = function () {
     throw new NotImplementedException();
 }
 
-function Class(name, superclass, members) {
+function Class(name, superclass, members, loc) {
     this.name = name;
     this.superclass = superclass;
     this.members = members;
+    this.location = loc;
 }
 Class.prototype = Object.create(Declaration.prototype);
 Class.prototype.evaluate = function (symbols) {
@@ -102,7 +98,7 @@ Class.prototype.evaluate = function (symbols) {
     this.members.forEach(
         function (member) {
             if (class_type.findMember(member.name) !== null) {
-                error(member.name + " has already been declared");
+                this.error(member.name + " has already been declared");
             }
             class_type.members[member.name] 
                 = generate_function_type(
@@ -125,7 +121,7 @@ Class.prototype.evaluate = function (symbols) {
                         class_type.members[member.name]
                     )
                 ) {
-                    error(
+                    this.error(
                         "Default value of member " 
                         + member.name 
                         + " in class " 
@@ -141,16 +137,17 @@ Class.prototype.evaluate = function (symbols) {
 };
 Class.prototype.declare = function (symbols) {
     if (symbols[this.name] !== undefined) {
-        error(this.name + " has already been declared");
+        this.error(this.name + " has already been declared");
     }
     symbols[this.name] = [this.evaluate(symbols)];
 };
 
-function Variable(name, parameters, type, body) {
+function Variable(name, parameters, type, body, loc) {
     this.name = name;
     this.parameters = parameters;
     this.type = type;
     this.body = body;
+    this.location = loc;
 }
 Variable.prototype = Object.create(Declaration.prototype);
 Variable.prototype.evaluate = function (symbols, check_only) {
@@ -176,7 +173,7 @@ Variable.prototype.evaluate = function (symbols, check_only) {
     // transform to function expression
     // mutual recursion is currently not supported
     var initialiser
-        = (new FunctionExpression(this.parameters, this.type, this.body))
+        = (new FunctionExpression(this.parameters, this.type, this.body, this.location))
             .evaluate(symbols, check_only);
     if (type === undefined) {
         type = initialiser.type;
@@ -197,15 +194,16 @@ Variable.prototype.declare = function (symbols, check_only) {
     }
 };
 
-function Template(name, parameters, content) {
+function Template(name, parameters, content, loc) {
     this.name = name;
     this.parameters = parameters;
     this.content = content;
+    this.location = loc;
 }
 Template.prototype = Object.create(Declaration.prototype);
 Template.prototype.declare = function (symbols) {
     if (symbols[this.name] !== undefined) {
-        error(this.name + "has already been declared");
+        this.error(this.name + "has already been declared");
     }
     symbols[this.name] = [this];
 };
@@ -213,10 +211,11 @@ Template.prototype.declare = function (symbols) {
 function Expression() {}
 Expression.prototype = Object.create(Node.prototype);
 
-function Program(imports, declarations, expression) {
+function Program(imports, declarations, expression, loc) {
     this.imports = imports;
     this.declarations = declarations;
     this.expression = expression;
+    this.location = loc;
 }
 Program.prototype = Object.create(Expression.prototype);
 Program.prototype.evaluate = function (symbols, check_only) {
@@ -233,9 +232,10 @@ Program.prototype.evaluate = function (symbols, check_only) {
     return this.expression.evaluate(symbols, check_only);
 };
 
-function Update(object, update) {
+function Update(object, update, loc) {
     this.object = object;
     this.update = update;
+    this.location = loc;
 }
 Update.prototype = Object.create(Expression.prototype);
 Update.prototype.evaluate = function (symbols, check_only) {
@@ -249,10 +249,10 @@ Update.prototype.evaluate = function (symbols, check_only) {
                 var init = assignment.value.evaluate(symbols, check_only);
                 var member_type = new_object.type.findMember(name);
                 if (member_type === null) {
-                    error("Member " + name + " does not exist");
+                    this.error("Member " + name + " does not exist");
                 }
                 if (!init.type.compatibleWith(member_type)) {
-                    error("Member " + name + " has the wrong type");
+                    this.error("Member " + name + " has the wrong type");
                 }
                 new_object.value[name] = init.value;
             }
@@ -270,7 +270,7 @@ Update.prototype.evaluate = function (symbols, check_only) {
             if (new_object.value[name] === undefined) {
                 var initialiser = object.initialisers[name];
                 if (initialiser === undefined) {
-                    error(
+                    this.error(
                         "Member " 
                         + name 
                         + " has no default value. A user-supplied value must be given."
@@ -280,16 +280,17 @@ Update.prototype.evaluate = function (symbols, check_only) {
             }
         }
         return new_object;
-    } else if (object instanceof Value && object.type instanceof ClassType) {
+    } else if (object.type instanceof ClassType) {
         return update_members(object);
     } else {
-        error("Cannot update members of a non-class object");
+        this.error("Cannot update members of a non-class object");
     }
 }
 
-function Call(f, argument) {
+function Call(f, argument, loc) {
     this.function = f;
     this.argument = argument;
+    this.location = loc;
 }
 Call.prototype = Object.create(Expression.prototype);
 Call.prototype.evaluate = function (symbols, check_only) {
@@ -301,10 +302,10 @@ Call.prototype.evaluate = function (symbols, check_only) {
     var type = lhs.type;
     if (type instanceof ArrayType) {
         if (lhs.type.elements === undefined) {
-            error("Cannot dereference an empty array");
+            this.error("Cannot dereference an empty array");
         }
         if (!rhs.type.compatibleWith(NativeType.Integer)) {
-            error("Array index must be an integer");
+            this.error("Array index must be an integer");
         }
         if (check_only) {
             return new Value(lhs.type.elements, undefined)
@@ -312,7 +313,7 @@ Call.prototype.evaluate = function (symbols, check_only) {
             if (rhs.value >= 0 && rhs.value < lhs.value.length) {
                 return new Value(lhs.type.elements, lhs.value[rhs.value]);
             } else {
-                error(
+                this.error(
                     "Array index overflow (index " 
                     + rhs.value 
                     + " called with an array of length " 
@@ -324,7 +325,7 @@ Call.prototype.evaluate = function (symbols, check_only) {
         }
     } else if (type instanceof FunctionType) {
         if (!rhs.type.compatibleWith(type.parameter)) {
-            error("Argument type " + rhs.type + " does not match parameter type " + type.parameter);
+            this.error("Argument type " + rhs.type + " does not match parameter type " + type.parameter);
         }
         if (check_only) {
             return new Value(type.return, undefined);
@@ -334,25 +335,27 @@ Call.prototype.evaluate = function (symbols, check_only) {
                 = [new Value(type.parameter, rhs.value)];
             var result = lhs.value.body.evaluate(closure_symbols);
             if (!result.type.compatibleWith(type.return)) {
-                error("Internal error: should have been checked already");
+                this.error("Internal error: should have been checked already");
             }
             return new Value(type.return, result.value);
         }
     } else {
-        error("Cannot call a value other than a function or an array");
+        this.error("Cannot call a value other than a function or an array");
     }
 };
 
-function Literal(object) {
+function Literal(object, loc) {
     this.object = object;
+    this.location = loc;
 }
 Literal.prototype = Object.create(Expression.prototype);
 Literal.prototype.evaluate = function () {
     return this.object;
 }
 
-function ArrayLiteral(elements) {
+function ArrayLiteral(elements, loc) {
     this.elements = elements;
+    this.location = loc;
 }
 ArrayLiteral.prototype = Object.create(Expression.prototype);
 ArrayLiteral.prototype.evaluate = function (symbols, check_only) {
@@ -362,11 +365,11 @@ ArrayLiteral.prototype.evaluate = function (symbols, check_only) {
     var value = this.elements.map(
         function (e) {
             var object = e.evaluate(symbols, check_only);
-            if (!object.type.compatibleWith(element_type)) {
+            if (!(object.type.compatibleWith(element_type))) {
                 if (element_type.compatibleWith(object.type)) {
                     element_type = object.type;
                 } else {
-                    error("Array literal contains inconsistent types");
+                    this.error("Array literal contains inconsistent types");
                 }
             }
             return object.value;
@@ -375,21 +378,22 @@ ArrayLiteral.prototype.evaluate = function (symbols, check_only) {
     return new Value(new ArrayType(element_type), value);
 };
 
-function Identifier(name) {
+function Identifier(name, loc) {
     this.name = name;
+    this.location = loc;
 }
 Identifier.prototype = Object.create(Expression.prototype);
 Identifier.prototype.evaluate 
-    = function (symbols, check_only, argument_type) {
+    = function (symbols, check_only, argument_type, type_acceptable) {
         if (symbols[this.name] === undefined) {
-            error("Cannot resolve symbol " + this.name);
+            this.error("Cannot resolve symbol " + this.name);
         }
         var ans;
         if (argument_type !== undefined) {
             // resolve overload
             symbols[this.name].forEach(
                 function (variant) {
-                    if (variant instanceof ClassType || variant instanceof Template) {
+                    if (type_acceptable && (variant instanceof ClassType || variant instanceof Template)) {
                         ans = variant;
                     } else if (
                         variant instanceof Value
@@ -409,31 +413,32 @@ Identifier.prototype.evaluate
                 }
             );
             if (ans === undefined) {
-                error("Cannot resolve suitable overload of " + this.name);
+                this.error("Cannot resolve suitable overload of " + this.name);
             }
         } else {
             if (symbols[this.name].length > 1) {
-                error(this.name + " is overloaded. Please select one by applying a template argument.");
+                this.error(this.name + " is overloaded. Please select one by applying a template argument.");
             }
             ans = symbols[this.name][0];
         }
         if (!check_only && ans instanceof Value && ans.value === undefined) {
-            error(this.name + " is not yet completely initialised");
+            this.error(this.name + " is not yet completely initialised");
         }
         return ans;
     };
 
-function FunctionExpression(parameters, type, body) {
+function FunctionExpression(parameters, type, body, loc) {
     this.parameters = parameters;
     this.type = type;
     this.body = body;
+    this.location = loc;
 }
 FunctionExpression.prototype = Object.create(Expression.prototype);
 FunctionExpression.prototype.evaluate = function (symbols, check_only) {
     function get_return_type(declared, actual) {
         if (declared !== null) {
             if (!actual.compatibleWith(declared)) {
-                error(
+                this.error(
                     "Type of function body " + actual 
                     + " does not match declared type " + declared
                 );
@@ -471,23 +476,26 @@ FunctionExpression.prototype.evaluate = function (symbols, check_only) {
                 this.parameters.slice(1)
                 , this.type
                 , this.body
+                , this.location
             )
+            , this.location
         );
         return transformed_node.evaluate(symbols, check_only);
     }
 };
 
-function If(condition, if_true, if_false) {
+function If(condition, if_true, if_false, loc) {
     this.condition = condition;
     this.then = if_true;
     this.else = if_false;
+    this.location = loc;
 }
 If.prototype = Object.create(Expression.prototype);
 If.prototype.evaluate = function (symbols, check_only) {
     // evaluate the condition
     var cond = this.condition.evaluate(symbols, check_only);
     if (!cond.type.compatibleWith(NativeType.Boolean)) {
-        error("If condition must be a boolean");
+        this.error("If condition must be a boolean");
     }
     var lhs_t = this.then.evaluate(symbols, true).type;
     var rhs_t = this.else.evaluate(symbols, true).type;
@@ -497,7 +505,7 @@ If.prototype.evaluate = function (symbols, check_only) {
     } else if (lhs_t.compatibleWith(rhs_t)) {
         type = rhs_t;
     } else {
-        error("The types between if-branches must be the same");
+        this.error("The types between if-branches must be the same");
     }
     if (check_only) {
         return new Value(type, undefined);
@@ -509,9 +517,10 @@ If.prototype.evaluate = function (symbols, check_only) {
     }
 };
 
-function Native(name, type) {
+function Native(name, type, loc) {
     this.name = name;
     this.type = type;
+    this.location = loc;
 }
 Native.prototype = Object.create(Expression.prototype);
 Native.prototype.evaluate = function (symbols, check_only) {
@@ -521,9 +530,10 @@ Native.prototype.evaluate = function (symbols, check_only) {
     );
 };
 
-function TemplateApplication(template, args) {
+function TemplateApplication(template, args, loc) {
     this.template = template;
     this.arguments = args;
+    this.location = loc;
 }
 TemplateApplication.prototype = Object.create(Expression.prototype);
 TemplateApplication.prototype.evaluate = function (symbols, check_only) {
@@ -553,26 +563,27 @@ TemplateApplication.prototype.evaluate = function (symbols, check_only) {
             }
             return template.content.evaluate(template_symbols, check_only);
         } else {
-            error("Template argument number mismatch");
+            this.error("Template argument number mismatch");
         }
      } else {
-         error("Cannot apply template arguments to a non-template");
+         this.error("Cannot apply template arguments to a non-template");
      }
 }
 
-function Member(object, member) {
+function Member(object, member, loc) {
     this.object = object;
     this.member = member;
+    this.location = loc;
 }
 Member.prototype = Object.create(Expression.prototype);
 Member.prototype.evaluate = function (symbols, check_only) {
     var object = this.object.evaluate(symbols, check_only);
-    if (!(object instanceof Value && object.type instanceof ClassType)) {
-        error("Cannot get member of a non-class type");
+    if (!(object.type instanceof ClassType)) {
+        this.error("Cannot get member of a non-class type");
     }
     var type = object.type.findMember(this.member);
     if (type === null) {
-        error("Member " + this.member + " does not exist");
+        this.error("Member " + this.member + " does not exist");
     }
     if (check_only) {
         return new Value(type, undefined);
@@ -580,3 +591,63 @@ Member.prototype.evaluate = function (symbols, check_only) {
         return new Value(type, object.value[this.member]);
     }
 };
+
+function Instance(object, type, loc) {
+    this.object = object;
+    this.type = type;
+    this.location = loc;
+}
+Instance.prototype = Object.create(Expression.prototype);
+Instance.prototype.evaluate = function (symbols, check_only) {
+    var object = this.object.evaluate(symbols, check_only);
+    var type = this.type.evaluate(symbols);
+    if (!(object.type instanceof ClassType)) {
+        this.error("Cannot apply @instance on a non-class value");
+    }
+    if (check_only) {
+        return new Value(NativeType.Boolean, undefined);
+    } else {
+        return new Value(NativeType.Boolean, object.value['@class'].compatibleWith(type));
+    }
+};
+
+function Cast(object, type, default_value, loc) {
+    this.object = object;
+    this.type = type;
+    this.default = default_value;
+    this.location = loc;
+}
+Cast.prototype = Object.create(Expression.prototype);
+Cast.prototype.evaluate = function (symbols, check_only) {
+    var object = this.object.evaluate(symbols, check_only);
+    var type = this.type.evaluate(symbols);
+    var default_object = this.default.evaluate(symbols, true);
+    if (!(default_value.type.compatibleWith(type))) {
+        this.error("The default value of @cast is not compatible with the target type");
+    }
+    if (!(object.type instanceof ClassType)) {
+        this.error("Cannot apply @instance on a non-class value");
+    }
+    if (check_only) {
+        return new Value(type, undefined);
+    } else {
+        return new Value(
+            type
+            , object.value['@class'].compatibleWith(type) ? object.value : default_object.value
+        );
+    }
+}
+
+function ErrorExpression(message, loc) {
+    this.message = message;
+    this.location = loc;
+}
+
+ErrorExpression.prototype = Object.create(Expression.prototype);
+ErrorExpression.prototype.evaluate = function (symbols, check_only) {
+    if (!check_only) {
+        this.error(this.message);
+    } else {
+        return new Value(new ErrorType(), undefined);
+    }
+}

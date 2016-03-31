@@ -1,9 +1,10 @@
 {
-    function binary_operator(op, a, b) {
-        return new Call(new Call(new Identifier(op), a), b);
+    // vim: filetype=javascript
+    function binary_operator(op, a, b, loc) {
+        return new Call(new Call(new Identifier(op, loc), a, loc), b, loc);
     }
     
-    function left_assoc(head, tail, callback) {
+    function left_assoc(head, tail, loc) {
         if (tail.length === 0) {
             return head;
         } else {
@@ -11,6 +12,7 @@
                 tail[tail.length - 1][0]
                 , left_assoc(head, tail.slice(0, tail.length - 1))
                 , tail[tail.length - 1][2]
+                , loc
             );
         }
     }
@@ -19,7 +21,7 @@
         if (template_parameters === null) {
             return node;
         } else {
-            var ans = new Template(node.name, template_parameters, node);
+            var ans = new Template(node.name, template_parameters, node, node.location);
             node.name = null;
             return ans;
         }
@@ -28,12 +30,12 @@
 
 program
     = _ imports:import* declarations:declaration* expression:expression {
-        return new Program(imports, declarations, expression);
+        return new Program(imports, declarations, expression, location());
     }
 
 import
     = "@import" _ from:qualified_identifier to:identifier? ";" _ { 
-        return new Import(from, to);
+        return new Import(from, to, location());
     }
 
 declaration
@@ -45,7 +47,7 @@ class_declaration
         name:identifier superclass:(":" _ type)? 
         "{" _ members:member_declaration* "}" _ { 
             return generate_template(
-                new Class(name, superclass === null ? null : superclass[2], members)
+                new Class(name, superclass === null ? null : superclass[2], members, location())
                 , t === null ? null : t[2]
             );
         }
@@ -60,6 +62,7 @@ variable_declaration
                     p === null ? [] : p[2],
                     type === null ? null : type[2], 
                     initialiser
+                    , location()
                 )
                 , t === null ? null : t[2]
             ); 
@@ -73,6 +76,7 @@ member_declaration
                 p === null ? [] : p[2],
                 type, 
                 initialiser instanceof Array ? null : initialiser
+                , location()
             );
         }
 
@@ -133,58 +137,58 @@ code_expression
 
 or_expression 
     = head:and_expression tail:('||' _ and_expression)* { 
-        return left_assoc(head, tail);
+        return left_assoc(head, tail, location());
     }
 
 and_expression 
     = head:bor_expression tail:('&&' _ bor_expression)* { 
-        return left_assoc(head, tail); 
+        return left_assoc(head, tail, location());
     }
 
 bor_expression 
     = head:xor_expression tail:('|' _ xor_expression)* { 
-        return left_assoc(head, tail); 
+        return left_assoc(head, tail, location());
     }
 
 xor_expression 
     = head:band_expression tail:('^' _ band_expression)* { 
-        return left_assoc(head, tail); 
+        return left_assoc(head, tail, location());
     }
 
 band_expression 
     = head:eq_expression tail:('&' _ eq_expression)* { 
-        return left_assoc(head, tail); 
+        return left_assoc(head, tail, location());
     }
 
 eq_expression 
     = head:comp_expression tail:(("==" / "!=") _ comp_expression)* {
-        return left_assoc(head, tail); 
+        return left_assoc(head, tail, location());
     }
 
 comp_expression 
     = head:shift_expression tail:(("<" / "<=" / ">=" / ">") _ shift_expression)* {
-        return left_assoc(head, tail); 
+        return left_assoc(head, tail, location());
     }
 
 shift_expression 
     = head:add_expression tail:(("<<" / ">>") _ add_expression)* { 
-        return left_assoc(head, tail); 
+        return left_assoc(head, tail, location());
     }
 
 add_expression 
     = head:mult_expression tail:(("+" / "-" / "++") _ mult_expression)* { 
-        return left_assoc(head, tail); 
+        return left_assoc(head, tail, location());
     }
 
 mult_expression 
     = head:unary_expression tail:(("*" / "/" / "%") _ unary_expression)* { 
-        return left_assoc(head, tail); 
+        return left_assoc(head, tail, location());
     }
 
 unary_expression 
     = postfix_expression
     / op:("+" / "-" / "!" / "~") _ expr:unary_expression { 
-        return new Call(new Identifier(op), expr);
+        return new Call(new Identifier(op, location()), expr, location());
     }   
     
 postfix_expression
@@ -196,15 +200,12 @@ postfix_expression
                 return new Call(
                     recursion(head, tail.slice(0, tail.length - 1))
                     , tail[tail.length - 1]
+                    , location()
                 );
             }
         }
         return recursion(head, tail);
     }
-    / "@if" _ cond:template_member_expression then:template_member_expression 
-        e:template_member_expression {
-            return new If(cond, then, e);
-        }
 
 member_update
     = '{' _ '}' _ {
@@ -239,16 +240,19 @@ template_member_expression
                     return new Member(
                         recursion(head, tail.slice(0, tail.length - 1))
                         , tail[tail.length - 1][2]
+                        , location()
                     );
                 } else if (tail[tail.length - 1][0] === '<') {
                     return new TemplateApplication(
                         recursion(head, tail.slice(0, tail.length - 1))
                         , tail[tail.length - 1][2]
+                        , location()
                     );
                 } else {
                     return new Update(
                         recursion(head, tail.slice(0, tail.length - 1))
                         , tail[tail.length - 1]
+                        , location()
                     );
                 }
             }
@@ -259,22 +263,47 @@ template_member_expression
 atom
     = literal
     / i:identifier {
-        return new Identifier(i);
+        return new Identifier(i, location());
     }
     / '(' _ e:expression ')' _ {
         return e;
     }
     / function_expression
     / native_expression
+    / if_expression
+    / instance_expression
+    / cast_expression
+    / error_expression
+
+if_expression
+    = "@if" _ '(' cond:expression ',' _ then:expression ',' _
+        e:expression ')' _ {
+            return new If(cond, then, e, location());
+        }
+
+instance_expression
+    = "@instance" _ '(' object:expression ',' _ type:type ')' _ {
+        return new Instance(object, type, location());
+    }
+
+cast_expression
+    = "@cast" _ '(' object:expression ',' _ type:type ',' _ e:expression')' _ {
+        return new Cast(object, type, e, location());
+    }
+
+error_expression
+    = "@error" _ '(' message:string_literal ')' _ {
+        return new ErrorExpression(message.object.value.join(""), location());
+    }
 
 built_in_type
     = t:("@Character" / "@Integer" / "@Float" / "@Boolean") _ {
-        return new TypeLiteral(NativeType[t.substr(1)]);
+        return new TypeLiteral(NativeType[t.substr(1)], location());
     }
 
 native_expression
     = '@native' _ '(' _ i:identifier ':' _ t:type ')' _ {
-        return new Native(i, t);
+        return new Native(i, t, location());
     }
 
 function_expression
@@ -283,6 +312,7 @@ function_expression
             p === null ? [] : p[2]
             , t === null ? null : t[2]
             , e
+            , location()
         );
     }
     
@@ -317,10 +347,10 @@ identifier
 type = s:(
     built_in_type
     / m:template_member_expression {
-        return new IdentifierTypeExpression(m);
+        return new IdentifierTypeExpression(m, location());
     }
     / '[' _ t:type ']' _ {
-        return new ArrayTypeExpression(t);
+        return new ArrayTypeExpression(t, location());
     }
     / '(' _ t:type ')' _ { return t; }
 )+ {
@@ -328,7 +358,7 @@ type = s:(
         if (s.length === 1) {
             return s[0];
         } else {
-            return new FunctionTypeExpression(s[0], recursion(s.slice(1)));
+            return new FunctionTypeExpression(s[0], recursion(s.slice(1)), location());
         }
     }
     return recursion(s);
@@ -346,6 +376,7 @@ char_literal
         {
             return new Literal(
                 new Value(NativeType.Character, c)
+                , location()
             );
         }
 
@@ -356,6 +387,7 @@ string_literal
                 new ArrayType(NativeType.Character)
                 , c
             )
+            , location()
         );
     }
 
@@ -364,21 +396,21 @@ float_literal
         ([0-9]+ "." [0-9]* / "." [0-9]+) ([eE] [+-]? [0-9]+)? 
         / [0-9]+_ [eE] [+-]? [0-9]+
     ) _ {
-        return new Literal(new Value(NativeType.Float, parseFloat(text())));
+        return new Literal(new Value(NativeType.Float, parseFloat(text())), location());
     }
     
 int_literal
     = ("0x"[0-9a-fA-F]+ / [0-9]+ ) _ {
-        return new Literal(new Value(NativeType.Integer, parseInt(text())));
+        return new Literal(new Value(NativeType.Integer, parseInt(text())), location());
     }
 
 array_literal
     = '[' _ es:(e:expression ',' _ {return e;})* ']' _ {
-        return new ArrayLiteral(es);
+        return new ArrayLiteral(es, location());
     }
     / '[' _ head:(e:expression ',' _ {return e;})* tail:expression ']' _ {
         head.push(tail);
-        return new ArrayLiteral(head);
+        return new ArrayLiteral(head, location());
     }
 
 char
