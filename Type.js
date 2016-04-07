@@ -1,10 +1,16 @@
 "use strict";
 
-function assert(condition, message) {
-    if (!condition) {
-        throw new InterpreterError("Assertion failed: " + message);
-    }
+var stack = [];
+
+function InterpreterError(message, loc) {
+    this.name = "InterpreterError";
+    this.message = message;
+    stack.unshift(loc);
+    this.call_stack = stack.slice();
+    stack = [];
 }
+
+InterpreterError.prototype = Object.create(Error.prototype);
 
 function Type() {}
 
@@ -38,7 +44,6 @@ NativeType.Character = new NativeType("@Character");
 NativeType.Boolean = new NativeType("@Boolean");
 
 function ArrayType(elements) {
-    assert(elements === undefined || elements instanceof Type);
     this.elements = elements;
 }
 ArrayType.prototype = Object.create(Type.prototype);
@@ -82,7 +87,6 @@ ArrayType.prototype.print = function (value) {
 }
 
 function FunctionType(parameter, r) {
-    assert(parameter instanceof Type && r instanceof Type);
     this.parameter = parameter;
     this.return = r;
 }
@@ -179,7 +183,6 @@ function TypeExpression() {}
 TypeExpression.prototype = Node.prototype;
 
 function TypeLiteral(type, loc) {
-    assert(type instanceof Type);
     this.type = type;
     this.location = loc;
 }
@@ -192,7 +195,6 @@ TypeLiteral.prototype.toString = function () {
 }
 
 function ArrayTypeExpression(elements, loc) {
-    assert(elements instanceof TypeExpression);
     this.elements = elements;
     this.location = loc;
 }
@@ -203,7 +205,6 @@ ArrayTypeExpression.prototype.evaluate = function (symbols) {
 ArrayTypeExpression.prototype.toString = ArrayType.prototype.toString;
 
 function FunctionTypeExpression(parameter, r, loc) {
-    assert(parameter instanceof TypeExpression && r instanceof TypeExpression);
     this.parameter = parameter;
     this.return = r;
     this.location = loc;
@@ -222,7 +223,7 @@ IdentifierTypeExpression.prototype = Object.create(TypeExpression.prototype);
 IdentifierTypeExpression.prototype.evaluate = function (symbols) {
     var ans = this.name.evaluate(symbols, true, undefined, true);
     if (!(ans instanceof Type)) {
-        this.error(this + " does not resolve to a type");
+        this.error("Non-type argument specified in type context");
     }
     return ans;
 };

@@ -20,7 +20,7 @@ function run() {
          
         document.getElementById("output").value = result;
     } catch (e) {
-        if (e.name === "SyntaxError" || e.name === "InterpreterError") {
+        if (e.name === "SyntaxError") {
             alert(
                 e.name
                 + ": \n"
@@ -31,6 +31,19 @@ function run() {
                 + " column " 
                 + e.location.start.column
             );
+        } else if (e.name === "InterpreterError") {
+            var message = 
+                e.name
+                + ": \n"
+                + e.message 
+                + "\n\n"
+                + "Call stack:\n";
+            e.call_stack.forEach(
+                function (layer, index) {
+                    message += "#" + index + ": line " + layer.start.line + " column " + layer.start.column + "\n";
+                }
+            );
+            alert(message);
         } else {
             throw e;
         }

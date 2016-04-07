@@ -46,13 +46,6 @@ function check_overload(symbols, node, new_type) {
 }
 
 
-function InterpreterError(message, loc) {
-    this.name = "InterpreterError";
-    this.message = message;
-    this.location = loc;
-}
-InterpreterError.prototype = Object.create(Error.prototype);
-
 function NotImplementedException(message) {
     this.name = "NotImplementedException";
     this.message = message;
@@ -334,7 +327,9 @@ Call.prototype.evaluate = function (symbols, check_only) {
             var closure_symbols = copy_symbols(lhs.value.symbols);
             closure_symbols[lhs.value.parameter.name] 
                 = [new Value(type.parameter, rhs.value)];
+            stack.unshift(this.location);
             var result = lhs.value.body.evaluate(closure_symbols);
+            stack.shift();
             if (!result.type.compatibleWith(type.return)) {
                 this.error("Internal error: should have been checked already");
             }
@@ -548,7 +543,6 @@ TemplateApplication.prototype.evaluate = function (symbols, check_only) {
      // resolve template arguments
      var args = this.arguments.map(
          function (a) {
-             assert(a instanceof TypeExpression);
              return a.evaluate(symbols);
          }
      );

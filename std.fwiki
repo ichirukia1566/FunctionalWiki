@@ -82,7 +82,7 @@
 // Array functions
 @var<T> length(x : [T]) : @Integer = @native(length : @Integer);
 @var<T> join(x : [T], y : [T]) : [T] = @native(join : [T]);
-@var<T> subarray(x : [T], start : @Integer, end : @Integer) {
+@var<T> subarray(start : @Integer, end : @Integer, x : [T]) {
     @var l = length<T> x;
     @if (
         start < 0
