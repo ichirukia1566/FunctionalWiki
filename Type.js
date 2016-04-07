@@ -140,12 +140,19 @@ ClassType.prototype.compatibleWith
         if (declared_type.superclass !== null && !must_exist_and_compatible(this.superclass, declared_type.superclass)) {
             return false;
         }
-        for (var name in declared_type.members) {
-            if (!must_exist_and_compatible(this.members[name], declared_type.members[name])) {
-                return false;
+        // for named types, compare by name
+        if (this.name !== null && declared_type.name !== null) {
+            return this.name === declared_type.name;
+        } else {
+            // if any one is an unnamed class (resulting from template), compare
+            // by structure
+            for (var name in declared_type.members) {
+                if (!must_exist_and_compatible(this.members[name], declared_type.members[name])) {
+                    return false;
+                }
             }
+            return true;
         }
-        return true;
     };
 
 /** Get the type of a particular member
@@ -221,7 +228,8 @@ function IdentifierTypeExpression(qualified_id, loc) {
 }
 IdentifierTypeExpression.prototype = Object.create(TypeExpression.prototype);
 IdentifierTypeExpression.prototype.evaluate = function (symbols) {
-    var ans = this.name.evaluate(symbols, true, undefined, true);
+    var ans = (new Identifier(this.name, this.location))
+        .evaluate(symbols, true, undefined, true);
     if (!(ans instanceof Type)) {
         this.error("Non-type argument specified in type context");
     }

@@ -36,7 +36,7 @@ var natives = {
         return parseFloat(symbols.x[0].value.join(''));
     },
     String : function (symbols) {
-        return String(symbols.x[0].value).split();
+        return [...String(symbols.x[0].value)];
     },
     // Boolean constants
     true : function () {

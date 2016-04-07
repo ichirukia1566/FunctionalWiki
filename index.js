@@ -1,24 +1,25 @@
+"use strict";
+
 function run() {
     document.getElementById("output").value = ""; // clear the text area first
     try {
+        title = "document";
+        var doc
+            = parser.parse(document.getElementById("document").value, {startRule : "program"});
+        title = "std";
         var std 
             = parser.parse(document.getElementById("std").value, {startRule : "program"});
-        var symbols = Object.create(null);
-        std.evaluate(symbols);
+        title = "input";
         var text
             = parser.parse(document.getElementById("code").value);
-        var result = "";
-        text.forEach(
-            function (section) {
-                if (section instanceof Expression) {
-                    result += section.evaluate(symbols);
-                } else {
-                    result += section;
-                }
-            }
-        );
-         
-        document.getElementById("output").value = result;
+
+        var symbols = Object.create(null);
+        std.evaluate(symbols);
+        doc.evaluate(symbols);
+        var doc_symbols = copy_symbols(symbols);
+        var result = text.evaluate(symbols);
+
+        document.getElementById("output").value = plain_text_generator(result.value, doc_symbols);
     } catch (e) {
         if (e.name === "SyntaxError") {
             alert(
@@ -40,7 +41,7 @@ function run() {
                 + "Call stack:\n";
             e.call_stack.forEach(
                 function (layer, index) {
-                    message += "#" + index + ": line " + layer.start.line + " column " + layer.start.column + "\n";
+                    message += "#" + index + ": file " + layer.title + " line " + layer.start.line + " column " + layer.start.column + "\n";
                 }
             );
             alert(message);

@@ -11,15 +11,15 @@
     )
 }
 
-@var recursion(level : @Integer) : [@Character] {
-    @if (
-        level == 0
-        , ""
-        , join<@Character> 
-            (recursion (level - 1))
-            (join<@Character> (string (pow 2 (level - 1))) "\n")
+table 
+    (map<@Integer, [TableCell]> 
+        @function(input : @Integer) {
+            [
+                cell (text input),
+                cell (text (pow 2 input)),
+            ]
+        }
+        (range 0 63)
     )
-}
 
-recursion 64
 #end#

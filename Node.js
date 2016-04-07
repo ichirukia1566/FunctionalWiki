@@ -1,4 +1,5 @@
 "use strict";
+var title;
 
 /** Make a copy of the symbol table to be stored in closures
  * @param symbols
@@ -45,7 +46,6 @@ function check_overload(symbols, node, new_type) {
     }
 }
 
-
 function NotImplementedException(message) {
     this.name = "NotImplementedException";
     this.message = message;
@@ -60,6 +60,78 @@ function generate_function_type(parameter_types, type) {
         parameter_types[0]
         , generate_function_type(parameter_types.slice(1), type)
     );
+}
+
+function Article(segments, loc) {
+    this.name = null;
+    this.segments = [];
+    var node = this;
+    segments.forEach(
+        function (segment) {
+            if (
+                typeof segment === "string"
+                && typeof node.segments[node.segments.length - 1] === "string"
+            ) {
+                node.segments[node.segments.length - 1] += segment;
+            } else {
+                node.segments.push(segment);
+            }
+        }
+    );
+    this.location = loc;
+}
+Article.prototype = Object.create(Node.prototype);
+// transitional, symbols param to be removed when import is implemented
+Article.prototype.evaluate = function (symbols) {
+    // parse all segments
+    var dummy_location = {
+        name : "<internal>",
+        start : {offset : 0, line : 0, column : 0},
+        end : {offset : 0, line : 0, column : 0},
+    };
+    var intermediates = this.segments.map(
+        function (segment) {
+            if (typeof segment === "string") {
+                return {
+                    value : new Value(new ArrayType(NativeType.Character), [...segment]), 
+                    location : dummy_location,
+                };
+            } else {
+                return {
+                    value : segment.evaluate(symbols), 
+                    location : segment.location,
+                };
+            }
+        }
+    );
+    // convert all results to Text
+    var text_type = new IdentifierTypeExpression("Text" , dummy_location)
+        .evaluate(symbols);
+    var results = intermediates.map(
+        function (segment) {
+            var result = new Call(
+                // XXX: hard-coded
+                new Identifier("text", segment.location)
+                , new Literal(segment.value, segment.location)
+                , segment.location
+            ).evaluate(symbols);
+            if (!result.type.compatibleWith(text_type)) {
+                throw new InterpreterError("Segment cannot be converted into document text", segment.location);
+            }
+            return result.value;
+        }
+    );
+    return new Update(
+        new Identifier("TextSequence", dummy_location)
+        , [
+            {
+                name : "content", 
+                value : new Literal(
+                    new Value(new ArrayType(text_type), results)
+                ),
+            }
+        ]
+    ).evaluate(symbols);
 }
 
 function Declaration() {}
@@ -233,7 +305,6 @@ function Update(object, update, loc) {
 }
 Update.prototype = Object.create(Expression.prototype);
 Update.prototype.evaluate = function (symbols, check_only) {
-    // TODO: add superclass support
     var node = this;
     function update_members(object) {
         var new_object = new Value(object.type, copy_symbols(object.value));
@@ -255,6 +326,9 @@ Update.prototype.evaluate = function (symbols, check_only) {
     }
     var object = this.object.evaluate(symbols, check_only, undefined, true);
     if (object instanceof ClassType) {
+        if (check_only) {
+            return new Value(object, undefined);
+        }
         // create a new instance of the class
         var value = Object.create(null);
         value['@class'] = object;
@@ -262,7 +336,15 @@ Update.prototype.evaluate = function (symbols, check_only) {
         // assign the default values to remaining members
         for (var name in object.getAllMembers()) {
             if (new_object.value[name] === undefined) {
-                var initialiser = object.initialisers[name];
+                var c = object;
+                var initialiser;
+                while (c !== null) {
+                    if (c.initialisers[name] !== undefined) {
+                        initialiser = c.initialisers[name];
+                        break;
+                    }
+                    c = c.superclass;
+                }
                 if (initialiser === undefined) {
                     this.error(
                         "Member " 
@@ -275,7 +357,7 @@ Update.prototype.evaluate = function (symbols, check_only) {
         }
         return new_object;
     } else if (object.type instanceof ClassType) {
-        return update_members(object);
+        return check_only ? object : update_members(object);
     } else {
         this.error("Cannot update members of a non-class object");
     }
@@ -462,7 +544,13 @@ FunctionExpression.prototype.evaluate = function (symbols, check_only) {
         var closure_symbols = copy_symbols(symbols);
         closure_symbols[this.parameters[0].name] 
             = [new Value(param_type, undefined)];
-        var return_type = get_return_type(type, this.body.evaluate(closure_symbols, true).type);
+        var return_type;
+        // XXX: hack for template recursion
+        if (type !== null && check_only) {
+            return_type = type;
+        } else {
+            return_type = get_return_type(type, this.body.evaluate(closure_symbols, true).type);
+        }
         return new Value(
             new FunctionType(param_type, return_type)
             , {

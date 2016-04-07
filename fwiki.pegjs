@@ -1,4 +1,10 @@
 {
+    function named_location() {
+        var l = location();
+        l.title = title;
+        return l;
+    }
+
     // vim: filetype=javascript
     function binary_operator(op, a, b, loc) {
         return new Call(new Call(new Identifier(op, loc), a, loc), b, loc);
@@ -28,18 +34,20 @@
     }
 }
 
-head = ('#code#' p:program '#end#' { return p; }/ passthrough)*
+head = x:('#code#' p:program '#end#' { return p; }/ passthrough)* {
+    return new Article(x, named_location());
+}
 
 passthrough = $(!'#code#' .)
 
 program
     = _ imports:import* declarations:declaration* expression:expression {
-        return new Program(imports, declarations, expression, location());
+        return new Program(imports, declarations, expression, named_location());
     }
 
 import
     = "@import" _ from:qualified_identifier to:identifier? ";" _ { 
-        return new Import(from, to, location());
+        return new Import(from, to, named_location());
     }
 
 declaration
@@ -51,7 +59,7 @@ class_declaration
         name:identifier superclass:(":" _ type)? 
         "{" _ members:member_declaration* "}" _ { 
             return generate_template(
-                new Class(name, superclass === null ? null : superclass[2], members, location())
+                new Class(name, superclass === null ? null : superclass[2], members, named_location())
                 , t === null ? null : t[2]
             );
         }
@@ -66,7 +74,7 @@ variable_declaration
                     p === null ? [] : p[2],
                     type === null ? null : type[2], 
                     initialiser
-                    , location()
+                    , named_location()
                 )
                 , t === null ? null : t[2]
             ); 
@@ -80,7 +88,7 @@ member_declaration
                 p === null ? [] : p[2],
                 type, 
                 initialiser instanceof Array ? null : initialiser
-                , location()
+                , named_location()
             );
         }
 
@@ -138,42 +146,42 @@ expression
     
 bor_expression 
     = head:xor_expression tail:('|' _ xor_expression)* { 
-        return left_assoc(head, tail, location());
+        return left_assoc(head, tail, named_location());
     }
 
 xor_expression 
     = head:band_expression tail:('^' _ band_expression)* { 
-        return left_assoc(head, tail, location());
+        return left_assoc(head, tail, named_location());
     }
 
 band_expression 
     = head:eq_expression tail:('&' _ eq_expression)* { 
-        return left_assoc(head, tail, location());
+        return left_assoc(head, tail, named_location());
     }
 
 eq_expression 
     = head:comp_expression tail:(("==" / "!=") _ comp_expression)* {
-        return left_assoc(head, tail, location());
+        return left_assoc(head, tail, named_location());
     }
 
 comp_expression 
     = head:shift_expression tail:(("<" / "<=" / ">=" / ">") _ shift_expression)* {
-        return left_assoc(head, tail, location());
+        return left_assoc(head, tail, named_location());
     }
 
 shift_expression 
     = head:add_expression tail:(("<<" / ">>") _ add_expression)* { 
-        return left_assoc(head, tail, location());
+        return left_assoc(head, tail, named_location());
     }
 
 add_expression 
     = head:mult_expression tail:(("+" / "-") _ mult_expression)* { 
-        return left_assoc(head, tail, location());
+        return left_assoc(head, tail, named_location());
     }
 
 mult_expression 
     = head:unary_expression tail:(("*" / "/" / "%") _ unary_expression)* { 
-        return left_assoc(head, tail, location());
+        return left_assoc(head, tail, named_location());
     }
 
 unary_expression 
@@ -181,7 +189,7 @@ unary_expression
     / op:("+" / "-" / "~") _ expr:unary_expression { 
         if (op == "+") op = "++";
         if (op == "-") op = "--";
-        return new Call(new Identifier(op, location()), expr, location());
+        return new Call(new Identifier(op, named_location()), expr, named_location());
     }   
     
 postfix_expression
@@ -193,7 +201,7 @@ postfix_expression
                 return new Call(
                     recursion(head, tail.slice(0, tail.length - 1))
                     , tail[tail.length - 1]
-                    , location()
+                    , named_location()
                 );
             }
         }
@@ -205,7 +213,7 @@ member_update
         return [];
     }
     / '{' head:member_assignment tail:(
-            ';' _ x:member_assignment {return x;}
+            ','/';' _ x:member_assignment {return x;}
         )* '}' _ 
     {
         tail.unshift(head);
@@ -232,13 +240,13 @@ member_expression
                     return new Member(
                         recursion(head, tail.slice(0, tail.length - 1))
                         , tail[tail.length - 1][2]
-                        , location()
+                        , named_location()
                     );
                 } else {
                     return new Update(
                         recursion(head, tail.slice(0, tail.length - 1))
                         , tail[tail.length - 1]
-                        , location()
+                        , named_location()
                     );
                 }
             }
@@ -248,10 +256,10 @@ member_expression
 
 template_application 
     = i:identifier '<' _ t:template_arguments_list '>' _ {
-        return new TemplateApplication(new Identifier(i, location()), t, location());
+        return new TemplateApplication(new Identifier(i, named_location()), t, named_location());
     }
     / i:identifier { 
-        return new Identifier(i, location());
+        return new Identifier(i, named_location());
     }
 
 atom
@@ -270,32 +278,32 @@ atom
 if_expression
     = "@if" _ '(' _ cond:expression ',' _ then:expression ',' _
         e:expression ')' _ {
-            return new If(cond, then, e, location());
+            return new If(cond, then, e, named_location());
         }
 
 instance_expression
     = "@instance" _ '(' _ object:expression ',' _ type:type ')' _ {
-        return new Instance(object, type, location());
+        return new Instance(object, type, named_location());
     }
 
 cast_expression
     = "@cast" _ '(' _ object:expression ',' _ type:type ',' _ e:expression')' _ {
-        return new Cast(object, type, e, location());
+        return new Cast(object, type, e, named_location());
     }
 
 error_expression
     = "@error" _ '(' _ message:string_literal ')' _ {
-        return new ErrorExpression(message.object.value.join(""), location());
+        return new ErrorExpression(message.object.value.join(""), named_location());
     }
 
 built_in_type
     = t:("@Character" / "@Integer" / "@Float" / "@Boolean") _ {
-        return new TypeLiteral(NativeType[t.substr(1)], location());
+        return new TypeLiteral(NativeType[t.substr(1)], named_location());
     }
 
 native_expression
     = '@native' _ '(' _ i:identifier ':' _ t:type ')' _ {
-        return new Native(i, t, location());
+        return new Native(i, t, named_location());
     }
 
 function_expression
@@ -304,7 +312,7 @@ function_expression
             p === null ? [] : p[2]
             , t === null ? null : t[2]
             , e
-            , location()
+            , named_location()
         );
     }
     
@@ -339,18 +347,18 @@ identifier
 type = s:(
     built_in_type
     / '[' _ t:type ']' _ {
-        return new ArrayTypeExpression(t, location());
+        return new ArrayTypeExpression(t, named_location());
     }
     / '(' _ t:type ')' _ { return t; }
-    / m:member_expression {
-        return new IdentifierTypeExpression(m, location());
+    / m:identifier {
+        return new IdentifierTypeExpression(m, named_location());
     }
 )+ {
     function recursion(s) {
         if (s.length === 1) {
             return s[0];
         } else {
-            return new FunctionTypeExpression(s[0], recursion(s.slice(1)), location());
+            return new FunctionTypeExpression(s[0], recursion(s.slice(1)), named_location());
         }
     }
     return recursion(s);
@@ -368,7 +376,7 @@ char_literal
         {
             return new Literal(
                 new Value(NativeType.Character, c)
-                , location()
+                , named_location()
             );
         }
 
@@ -379,7 +387,7 @@ string_literal
                 new ArrayType(NativeType.Character)
                 , c
             )
-            , location()
+            , named_location()
         );
     }
 
@@ -388,7 +396,7 @@ float_literal
         ([0-9]+ "." [0-9]* / "." [0-9]+) ([eE] [+-]? [0-9]+)? 
         / [0-9]+_ [eE] [+-]? [0-9]+
     ) _ {
-        return new Literal(new Value(NativeType.Float, parseFloat(text())), location());
+        return new Literal(new Value(NativeType.Float, parseFloat(text())), named_location());
     }
     
 int_literal
@@ -397,16 +405,16 @@ int_literal
         if ((value | 0) !== value) {
             error("Integer literal out of bound");
         }
-        return new Literal(new Value(NativeType.Integer, value, location()));
+        return new Literal(new Value(NativeType.Integer, value, named_location()));
     }
 
 array_literal
     = '[' _ es:(e:expression ',' _ {return e;})* ']' _ {
-        return new ArrayLiteral(es, location());
+        return new ArrayLiteral(es, named_location());
     }
     / '[' _ head:(e:expression ',' _ {return e;})* tail:expression ']' _ {
         head.push(tail);
-        return new ArrayLiteral(head, location());
+        return new ArrayLiteral(head, named_location());
     }
 
 char

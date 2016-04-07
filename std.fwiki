@@ -99,4 +99,21 @@
     )
 }
 
+// Utilities
+@var<T> tail(xs : [T]) = subarray<T> 1 (length<T> xs) xs;
+@var<From, To> map(f : From To, xs : [From]) : [To] = @if(
+    length<From> xs == 0
+    , []
+    , join<To> [f (xs 0)] (map<From, To> f (tail<From> xs))
+);
+@var range(from : @Integer, to : @Integer) : [@Integer] = @if(
+    from == to
+    , [from]
+    , @if (
+        from > to
+        , join<@Integer> [from] (range (from - 1) to)
+        , join<@Integer> [from] (range (from + 1) to)
+    )
+);
+
 0

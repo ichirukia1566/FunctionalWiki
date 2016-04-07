@@ -7,9 +7,84 @@
     <script src="Node.js"/>
     <script src="fwiki.js"/>
     <script src="natives.js"/>
+    <script src="generator.js"/>
     <script src="index.js"/>
   </head>
   <body>
+    <textarea id="document" style="display: none;"><![CDATA[// base class for all texts
+@class Text {
+}
+
+@class InlineText : Text {
+}
+
+@class PlainText : InlineText {
+    @var content : [@Character];
+}
+
+@class StrongText : InlineText {
+    @var content : InlineText;
+}
+
+@var strong(content : InlineText) = StrongText {content = content};
+
+@class EmphasisedText : InlineText {
+    @var content : InlineText;
+}
+@var emphasis(content : InlineText) = EmphasisedText {content = content};
+
+// A CSS Style
+@class Style {
+    @var property : [@Character];
+    @var value : [@Character];
+}
+
+@var style(prop : [@Character], val : [@Character])
+    = Style {property = prop; value = val};
+
+@class StyledText : InlineText {
+    // CSS Styles applicable to the text
+    @var styles : [Style];
+    @var content : InlineText;
+}
+
+@var apply_style(styles : [Style], content : InlineText)
+    = StyledText {styles = styles; content = content};
+
+@class TableCell : Text {
+    @var colspan : @Integer = 1;
+    @var rowspan : @Integer = 1;
+    @var content : Text;
+}
+
+@var cell(content : Text) = TableCell {content = content};
+
+@class Table : Text {
+    @var cells : [[TableCell]];
+}
+@var table(cells : [[TableCell]]) = Table {cells = cells};
+
+@class Heading : Text {
+    @var level : @Integer;
+    @var content : InlineText;
+}
+
+@var heading(level : @Integer, content : InlineText)
+    = Heading {level = level; content = content};
+
+@class TextSequence : Text {
+    @var content : [Text];
+}
+
+@var text(x : [@Character]) = PlainText {content = x};
+@var text(x : @Integer) = text (string x);
+@var text(x : @Float) = text (string x);
+@var text(x : @Character) = text (string x);
+@var text(x : @Boolean) = text (string x);
+@var text(x : Text) = x;
+
+0]]></textarea>
+
     <textarea id="std" cols="80" rows="25" style="display: none;"><![CDATA[// Boolean constants
 @var true = @native(true : @Boolean);
 @var false = @native(false : @Boolean);
@@ -110,6 +185,24 @@
         )
     )
 }
+
+// Utilities
+@var<T> tail(xs : [T]) = subarray<T> 1 (length<T> xs) xs;
+@var<From, To> map(f : From To, xs : [From]) : [To] = @if(
+    length<From> xs == 0
+    , []
+    , join<To> [f (xs 0)] (map<From, To> f (tail<From> xs))
+);
+@var range(from : @Integer, to : @Integer) : [@Integer] = @if(
+    from == to
+    , [from]
+    , @if (
+        from > to
+        , join<@Integer> [from] (range (from - 1) to)
+        , join<@Integer> [from] (range (from + 1) to)
+    )
+);
+
 
 0]]></textarea>
     <textarea id="code" cols="80" rows="25">This is a test script. The factorial of 6 is #code#
