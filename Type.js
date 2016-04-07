@@ -6,13 +6,7 @@ function assert(condition, message) {
     }
 }
 
-
 function Type() {}
-Type.prototype = {
-    print : function (value) {
-        return JSON.stringify(value);
-    }
-};
 
 function ErrorType() {
     this.name = "@error";
@@ -35,6 +29,9 @@ NativeType.prototype.compatibleWith
 NativeType.prototype.toString = function () {
     return this.name;
 };
+NativeType.prototype.print = function (value) {
+    return String(value);
+}
 NativeType.Integer = new NativeType("@Integer");
 NativeType.Float = new NativeType("@Float");
 NativeType.Character = new NativeType("@Character");
@@ -64,6 +61,9 @@ ArrayType.prototype.toString
         return "[" + this.elements.toString() + "]"
     };
 ArrayType.prototype.print = function (value) {
+    if (this.elements.compatibleWith(NativeType.Character)) {
+        return value.join('');
+    }
     var ans = "[";
     var first = true;
     var type = this;

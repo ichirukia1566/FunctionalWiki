@@ -2,22 +2,6 @@
 @var true = @native(true : @Boolean);
 @var false = @native(false : @Boolean);
 
-// Math operators
-@var @operator++(x : @Integer) = @native(noop : @Integer);
-@var @operator++(x : @Float) = @native(noop : @Float);
-@var @operator--(x : @Integer) = @native(negate : @Integer);
-@var @operator--(x : @Float) = @native(negate : @Float);
-@var @operator+(lhs : @Integer, rhs : @Integer) : @Integer = @native(plus : @Integer);
-@var @operator+(lhs : @Float, rhs : @Float) : @Float = @native(plus : @Float);
-@var @operator-(lhs : @Integer, rhs : @Integer) : @Integer = @native(minus : @Integer);
-@var @operator-(lhs : @Float, rhs : @Float) : @Float = @native(minus : @Float);
-@var @operator*(lhs : @Integer, rhs : @Integer) : @Integer = @native(times : @Integer);
-@var @operator*(lhs : @Float, rhs : @Float) : @Float = @native(times : @Float);
-@var @operator/(lhs : @Float, rhs : @Float) : @Float = @native(over : @Float);
-@var @operator%(lhs : @Integer, rhs : @Integer) : @Integer = @native(mod : @Integer);
-@var @operator%(lhs : @Float, rhs : @Float) : @Float = @native(mod : @Float);
-@var isnan(x : @Float) = @native(isnan : @Float);
-
 // comparison
 @var @operator>(lhs : @Integer, rhs : @Integer) = @native(greater : @Boolean);
 @var @operator>(lhs : @Float, rhs : @Float) = @native(greater : @Boolean);
@@ -50,12 +34,37 @@
 @var integer(x : @Integer) = x;
 @var integer(x : @Float) = @native(trunc : @Integer);
 @var integer(x : @Character) = @native(ord : @Integer);
+@var integer(x : [@Character]) = @native(parseInt : @Integer);
 
 @var float(x : @Integer) = @native(noop : @Float);
 @var float(x : @Float) = x;
+@var float(x : [@Character]) = @native(parseFloat : @Float);
 
 @var character(x : @Integer) = @native(chr : @Character);
 @var character(x : @Character) = x;
+
+@var string(x : @Boolean) = @if(x, "true", "false");
+@var string(x : @Character) = [x];
+@var string(x : @Integer) = @native(String : [@Character]);
+@var string(x : @Float) = @native(String : [@Character]);
+@var string(x : [@Character]) = x;
+
+// Math operators
+@var @operator++(x : @Integer) = @native(noop : @Integer);
+@var @operator++(x : @Float) = @native(noop : @Float);
+@var @operator--(x : @Integer) = @native(negate_int : @Integer);
+@var @operator--(x : @Float) = @native(negate : @Float);
+@var @operator+(lhs : @Integer, rhs : @Integer) : @Integer = @native(plus_int : @Integer);
+@var @operator+(lhs : @Float, rhs : @Float) : @Float = @native(plus : @Float);
+@var @operator-(lhs : @Integer, rhs : @Integer) : @Integer = @native(minus_int : @Integer);
+@var @operator-(lhs : @Float, rhs : @Float) : @Float = @native(minus : @Float);
+@var @operator*(lhs : @Integer, rhs : @Integer) : @Integer = @native(times_int : @Integer);
+@var @operator*(lhs : @Float, rhs : @Float) : @Float = @native(times : @Float);
+@var @operator/(lhs : @Float, rhs : @Float) : @Float = @native(over : @Float);
+@var @operator/(lhs : @Integer, rhs : @Integer) : @Integer = integer (float lhs / float rhs);
+@var @operator%(lhs : @Integer, rhs : @Integer) : @Integer = @native(mod : @Integer);
+@var @operator%(lhs : @Float, rhs : @Float) : @Float = @native(mod : @Float);
+@var isnan(x : @Float) = @native(isnan : @Float);
 
 // bitwise
 @var @operator&(lhs : @Integer, rhs : @Integer) : @Integer = @native(and : @Integer);

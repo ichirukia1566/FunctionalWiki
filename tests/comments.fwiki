@@ -1,3 +1,4 @@
+#code#
 //
 /* */
 /*/comment*/ 1
@@ -9,4 +10,4 @@
 /**** The result should be 6 *********/
 
 
-
+#end#

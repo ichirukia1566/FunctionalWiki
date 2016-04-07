@@ -1,0 +1,25 @@
+#code#
+@var pow(x : @Integer, y : @Integer) : @Integer {
+    @if (
+        y == 0
+        , 1
+        , @if (
+             y % 2 == 0
+             , pow (x * x) (integer (y / 2))
+             , pow x (y - 1) * x
+        )
+    )
+}
+
+@var recursion(level : @Integer) : [@Character] {
+    @if (
+        level == 0
+        , ""
+        , join<@Character> 
+            (recursion (level - 1))
+            (join<@Character> (string (pow 2 (level - 1))) "\n")
+    )
+}
+
+recursion 64
+#end#

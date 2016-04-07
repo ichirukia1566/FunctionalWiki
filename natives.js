@@ -25,6 +25,19 @@ var natives = {
     test_float : function (symbols) {
         return symbols.x[0].value ? true : false;
     },
+    parseInt : function (symbols, loc) {
+        var x = parseInt(symbols.x[0].value.join(''), 10);
+        if ((x | 0) !== x) {
+            throw new InterpreterError(symbols.x[0].value.join('') + " does not form a valid 32-bit integer", loc);
+        }
+        return x;
+    },
+    parseFloat : function (symbols, loc) {
+        return parseFloat(symbols.x[0].value.join(''));
+    },
+    String : function (symbols) {
+        return String(symbols.x[0].value).split();
+    },
     // Boolean constants
     true : function () {
         return true;
@@ -36,11 +49,20 @@ var natives = {
     plus : function (symbols) {
         return symbols.lhs[0].value + symbols.rhs[0].value;
     },
+    plus_int : function (symbols) {
+        return natives.plus(symbols) | 0;
+    },
     minus : function (symbols) {
         return symbols.lhs[0].value - symbols.rhs[0].value;
     },
+    minus_int : function (symbols) {
+        return natives.minus(symbols) | 0;
+    },
     times : function (symbols) {
         return symbols.lhs[0].value * symbols.rhs[0].value;
+    },
+    times_int : function (symbols) {
+        return natives.times(symbols) | 0;
     },
     over : function (symbols) {
         return symbols.lhs[0].value / symbols.rhs[0].value;
@@ -53,6 +75,9 @@ var natives = {
     },
     negate : function (symbols) {
         return -symbols.x[0].value;
+    },
+    negate_int : function (symbols) {
+        return natives.negate(symbols) | 0;
     },
 
     // comparison

@@ -1,3 +1,4 @@
+#code#
 @class Test {
     @var a : @Integer = 3;
     @var b : @Integer = 4;
@@ -8,3 +9,4 @@
     @var t = Test {a = 5} {a = 7};
     t.f (t.a + t.b)
 }
+#end#
