@@ -331,7 +331,7 @@ function_expression
     
 source
     = i:identifier {return i;}
-    / s:string_literal {return '@' + s.value.join('');}
+    / s:string_literal {return '@' + s.object.value.join('');}
 
 identifier
     = i:$ ([_a-zA-Z\xA0-\uFFFF][_a-zA-Z0-9\xA0-\uFFFF]*) _ {

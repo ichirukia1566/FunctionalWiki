@@ -5,3 +5,14 @@ emphasis (text "This is some emphasised text")
 #code#
 strong (text "This is some strong text")
 #end#
+
+Here are the factorials from 0 to 10:
+#code#
+@import "factorial".factorial;
+
+table (
+    map<@Integer, [TableCell]> 
+        @function (x : @Integer) {[cell (text x), cell (text (factorial x))]}
+        (range 0 10)
+)
+#end#

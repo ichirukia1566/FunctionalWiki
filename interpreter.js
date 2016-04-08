@@ -461,23 +461,27 @@ function Import(from, identifier, to, loc) {
 
 Import.prototype = Object.create(Declaration.prototype);
 Import.prototype.declare = function (symbols) {
-    var import_symbols = do_import(from, this.location);
-    if (import_symbols[this.identifier] === undefined) {
-        this.error(this.identifier + " does not exist in imported article");
+    var import_symbols = do_import(this.from, this.location);
+    var node = this;
+    if (import_symbols[node.identifier] === undefined) {
+        node.error(node.identifier + " does not exist in imported article");
     }
-    if (this.to === null) {
-        this.to = this.identifier;
+    if (node.to === null) {
+        node.to = node.identifier;
     }
-    import_symbols[this.identifier].forEach(
+    import_symbols[node.identifier].forEach(
         function (overload) {
             if (overload instanceof Value) {
-                check_overload(symbols, this.to, overload.type, this.location);
-                symbols[this.to].push(overload);
-            } else {
-                if (symbols[this.to] !== undefined) {
-                    this.error(this.to + " has already been declared");
+                if (symbols[node.to] === undefined) {
+                    symbols[node.to] = [];
                 }
-                symbols[this.to] = [overload];
+                check_overload(symbols, node.to, overload.type, node.location);
+                symbols[node.to].push(overload);
+            } else {
+                if (symbols[node.to] !== undefined) {
+                    node.error(node.to + " has already been declared");
+                }
+                symbols[node.to] = [overload];
             }
         }
     );
