@@ -170,7 +170,7 @@
 @class TableCell : Text {
     @var colspan : @Integer = 1;
     @var rowspan : @Integer = 1;
-    @var content : Text;
+    @var content : InlineText;
 }
 
 @var cell(content : Text) = TableCell {content = content};
