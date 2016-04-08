@@ -1,7 +1,7 @@
 {
     function named_location() {
         var l = location();
-        l.title = title;
+        l.title = options.title;
         return l;
     }
 
@@ -297,7 +297,7 @@ error_expression
     }
 
 built_in_type
-    = t:("@Character" / "@Integer" / "@Float" / "@Boolean") _ {
+    = t:("@Character" / "@Integer" / "@Float" / "@Boolean" / "@Null") _ {
         return new TypeLiteral(NativeType[t.substr(1)], named_location());
     }
 

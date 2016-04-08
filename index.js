@@ -3,15 +3,14 @@
 function run() {
     document.getElementById("output").value = ""; // clear the text area first
     try {
-        title = "document";
         var doc
-            = parser.parse(document.getElementById("document").value, {startRule : "program"});
+            = parser.parse(document.getElementById("document").value, {startRule : "program", title : "document"});
         title = "std";
         var std 
-            = parser.parse(document.getElementById("std").value, {startRule : "program"});
+            = parser.parse(document.getElementById("std").value, {startRule : "program", title : "std"});
         title = "input";
         var text
-            = parser.parse(document.getElementById("code").value);
+            = parser.parse(document.getElementById("code").value, {title : "input"});
 
         var symbols = Object.create(null);
         std.evaluate(symbols);

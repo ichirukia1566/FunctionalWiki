@@ -88,6 +88,7 @@
     <textarea id="std" cols="80" rows="25" style="display: none;"><![CDATA[// Boolean constants
 @var true = @native(true : @Boolean);
 @var false = @native(false : @Boolean);
+@var null = @native(null : @Null);
 
 // comparison
 @var @operator>(lhs : @Integer, rhs : @Integer) = @native(greater : @Boolean);
@@ -116,25 +117,30 @@
 @var boolean(x : @Integer) = x != 0;
 @var boolean(x : @Float) = @native(test_float : @Boolean);
 @var boolean(x : @Character) = x != '\0';
+@var boolean(x : @Null) = false;
 
 @var integer(x : @Boolean) = @if(x, 1, 0);
 @var integer(x : @Integer) = x;
 @var integer(x : @Float) = @native(trunc : @Integer);
 @var integer(x : @Character) = @native(ord : @Integer);
 @var integer(x : [@Character]) = @native(parseInt : @Integer);
+@var integer(x : @Null) = 0;
 
 @var float(x : @Integer) = @native(noop : @Float);
 @var float(x : @Float) = x;
 @var float(x : [@Character]) = @native(parseFloat : @Float);
+@var float(x : @Null) = 0.0;
 
 @var character(x : @Integer) = @native(chr : @Character);
 @var character(x : @Character) = x;
+@var character(x : @Null) = '\0';
 
 @var string(x : @Boolean) = @if(x, "true", "false");
 @var string(x : @Character) = [x];
 @var string(x : @Integer) = @native(String : [@Character]);
 @var string(x : @Float) = @native(String : [@Character]);
 @var string(x : [@Character]) = x;
+@var string(x : @Null) = "";
 
 // Math operators
 @var @operator++(x : @Integer) = @native(noop : @Integer);
@@ -148,7 +154,7 @@
 @var @operator*(lhs : @Integer, rhs : @Integer) : @Integer = @native(times_int : @Integer);
 @var @operator*(lhs : @Float, rhs : @Float) : @Float = @native(times : @Float);
 @var @operator/(lhs : @Float, rhs : @Float) : @Float = @native(over : @Float);
-@var @operator/(lhs : @Integer, rhs : @Integer) : @Integer
+@var @operator/(lhs : @Integer, rhs : @Integer) : @Integer 
     = @if (rhs == 0, @error("division by 0"), integer (float lhs / float rhs));
 @var @operator%(lhs : @Integer, rhs : @Integer) : @Integer = @native(mod : @Integer);
 @var @operator%(lhs : @Float, rhs : @Float) : @Float = @native(mod : @Float);
@@ -203,7 +209,6 @@
         , join<@Integer> [from] (range (from + 1) to)
     )
 );
-
 
 0]]></textarea>
     <textarea id="code" cols="80" rows="25">This is a test script. The factorial of 6 is #code#

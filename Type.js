@@ -42,6 +42,7 @@ NativeType.Integer = new NativeType("@Integer");
 NativeType.Float = new NativeType("@Float");
 NativeType.Character = new NativeType("@Character");
 NativeType.Boolean = new NativeType("@Boolean");
+NativeType.Null = new NativeType("@Null");
 
 function ArrayType(elements) {
     this.elements = elements;

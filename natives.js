@@ -45,6 +45,9 @@ var natives = {
     false : function () {
         return false;
     },
+    null : function () {
+        return null;
+    },
     // Math operators
     plus : function (symbols) {
         return symbols.lhs[0].value + symbols.rhs[0].value;
