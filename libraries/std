@@ -74,7 +74,7 @@
     = @if (rhs == 0, @error("division by 0"), integer (float lhs / float rhs));
 @var @operator%(lhs : @Integer, rhs : @Integer) : @Integer = @native(mod : @Integer);
 @var @operator%(lhs : @Float, rhs : @Float) : @Float = @native(mod : @Float);
-@var isnan(x : @Float) = @native(isnan : @Float);
+@var isnan(x : @Float) = @native(isnan : @Boolean);
 
 // bitwise
 @var @operator&(lhs : @Integer, rhs : @Integer) : @Integer = @native(and : @Integer);
