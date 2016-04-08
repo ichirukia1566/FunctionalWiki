@@ -21,10 +21,12 @@
 @var @operator==(lhs : @Float, rhs : @Float) = @native(equal : @Boolean);
 @var @operator==(lhs : @Boolean, rhs : @Boolean) = @native(equal : @Boolean);
 @var @operator==(lhs : @Character, rhs : @Character) = @native(equal : @Boolean);
+@var @operator==(lhs : @Null, rhs : @Null) = true;
 @var @operator!=(lhs : @Integer, rhs : @Integer) = @native(not_equal : @Boolean);
 @var @operator!=(lhs : @Float, rhs : @Float) = @native(not_equal : @Boolean);
 @var @operator!=(lhs : @Boolean, rhs : @Boolean) = @native(not_equal : @Boolean);
 @var @operator!=(lhs : @Character, rhs : @Character) = @native(not_equal : @Boolean);
+@var @operator!=(lhs : @Null, rhs : @Null) = false;
 
 // Type conversions
 @var boolean(x : @Boolean) = x;
