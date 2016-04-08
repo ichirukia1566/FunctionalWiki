@@ -83,6 +83,7 @@
 @var @operator~(x : @Integer) : @Integer = @native(not : @Integer);
 @var @operator<<(lhs : @Integer, rhs : @Integer) : @Integer = @native(shift_left : @Integer);
 @var @operator>>(lhs : @Integer, rhs : @Integer) : @Integer = @native(shift_right : @Integer);
+@var @operator>>>(lhs : @Integer, rhs : @Integer) : @Integer = @native(shift_right_unsigned : @Integer);
 
 @var @operator&(lhs : @Boolean, rhs : @Boolean) : @Boolean = boolean (integer lhs & integer rhs);
 @var @operator^(lhs : @Boolean, rhs : @Boolean) : @Boolean = boolean (integer lhs ^ integer rhs);

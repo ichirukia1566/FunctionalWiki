@@ -176,7 +176,7 @@ comp_expression
     }
 
 shift_expression 
-    = head:add_expression tail:(("<<" / ">>") _ add_expression)* { 
+    = head:add_expression tail:(("<<" / ">>>" / ">>") _ add_expression)* { 
         return left_assoc(head, tail, named_location());
     }
 
@@ -339,7 +339,7 @@ identifier
     }
     / '@operator' _ op:(
         '++' / '--' / '+' / '-' / '*' / '/' / '%'
-        / '&' / '^' / '|' / '~' / '<<' / '>>'
+        / '&' / '^' / '|' / '~' / '<<' / '>>>' / '>>'
         / '==' / '!=' / '<=' / '<' / '>=' / '>'
     ) _ {
         return op;

@@ -122,6 +122,9 @@ var natives = {
     shift_right : function (symbols) {
         return symbols.lhs[0].value >> symbols.rhs[0].value;
     },
+    shift_right_unsigned : function (symbols) {
+        return symbols.lhs[0].value >>> symbols.rhs[0].value;
+    },
 
     // array
     length : function (symbols) {
