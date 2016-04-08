@@ -1,10 +1,229 @@
 "use strict";
-var title;
 
-/** Make a copy of the symbol table to be stored in closures
- * @param symbols
- * @return object
+var stack = [];
+var natives = require('./natives');
+
+function InterpreterError(message, loc) {
+    this.name = "InterpreterError";
+    this.message = message;
+    stack.unshift(loc);
+    this.call_stack = stack.slice();
+    stack = [];
+}
+
+InterpreterError.prototype = Object.create(Error.prototype);
+InterpreterError.prototype.toString = function () {
+    var message = 
+        this.message 
+        + "\n\n"
+        + "Call stack:\n";
+    this.call_stack.forEach(
+        function (layer, index) {
+            message += "#" + index + ": file " + layer.title + " line " + layer.start.line + " column " + layer.start.column + "\n";
+        }
+    );
+    return message;
+}
+
+function NotImplementedException(message) {
+    this.name = "NotImplementedException";
+    this.message = message;
+}
+NotImplementedException.prototype = Object.create(Error.prototype);
+
+module.exports.errors = {
+    InterpreterError : InterpreterError,
+    NotImplementedException : NotImplementedException,
+};
+
+function Type() {}
+
+function ErrorType() {
+    this.name = "@error";
+}
+ErrorType.prototype = Object.create(Type.prototype);
+ErrorType.prototype.compatibleWith
+    = function () {
+        return true;
+    };
+
+function NativeType(name) {
+    this.name = name;
+}
+NativeType.prototype = Object.create(Type.prototype);
+NativeType.prototype.compatibleWith
+    = function (declared_type) {
+        return declared_type instanceof NativeType
+            && declared_type.name === this.name;
+    };
+NativeType.prototype.toString = function () {
+    return this.name;
+};
+NativeType.prototype.print = function (value) {
+    return String(value);
+}
+NativeType.Integer = new NativeType("@Integer");
+NativeType.Float = new NativeType("@Float");
+NativeType.Character = new NativeType("@Character");
+NativeType.Boolean = new NativeType("@Boolean");
+NativeType.Null = new NativeType("@Null");
+
+function ArrayType(elements) {
+    this.elements = elements;
+}
+ArrayType.prototype = Object.create(Type.prototype);
+ArrayType.prototype.compatibleWith
+    = function (declared_type) {
+        return declared_type instanceof ArrayType
+            && (
+                this.elements === undefined
+                || (
+                    declared_type.elements !== undefined
+                    && this.elements.compatibleWith(declared_type.elements)
+                )
+            );
+    };
+ArrayType.prototype.toString
+    = function () {
+        if (this.elements === undefined) {
+            return "[]";
+        }
+        return "[" + this.elements.toString() + "]"
+    };
+ArrayType.prototype.print = function (value) {
+    if (this.elements.compatibleWith(NativeType.Character)) {
+        return value.join('');
+    }
+    var ans = "[";
+    var first = true;
+    var type = this;
+    value.forEach(
+        function (element) {
+            if (first) {
+                first = false;
+            } else {
+                ans += ", ";
+            }
+            ans += type.elements.print(element);
+        }
+    );
+    ans += "]";
+    return ans;
+}
+
+function FunctionType(parameter, r) {
+    this.parameter = parameter;
+    this.return = r;
+}
+FunctionType.prototype = Object.create(Type.prototype);
+FunctionType.prototype.toString
+    = function () {
+        return this.parameter.toString() + " " + this.return.toString();
+    };
+FunctionType.prototype.print = function (value) {
+    return "Function (" + this.parameter + " " + this.return + ")";
+}
+FunctionType.prototype.compatibleWith
+    = function (declared_type) {
+        return declared_type instanceof FunctionType
+            && this.return.compatibleWith(declared_type.return)
+            && declared_type.parameter.compatibleWith(this.parameter);
+    };
+
+function ClassType(name, superclass, members, initialisers) {
+    this.name = name;
+    this.superclass = superclass;
+    this.members = members;
+    this.initialisers = initialisers;
+}
+
+ClassType.prototype = Object.create(Type.prototype);
+ClassType.prototype.toString = function () {
+    return this.name;
+};
+ClassType.prototype.print = function (value) {
+    var ans = "{\n";
+    for (var name in value) {
+        ans += "\t" + name + " : " + value['@class'].members[name].print(value) + "\n";
+    }
+    ans += "}";
+    return ans;
+};
+ClassType.prototype.compatibleWith
+    = function (declared_type) {
+        function must_exist_and_compatible(actual, declared) {
+            return actual != null /* maybe undefined */ && actual.compatibleWith(declared);
+        }
+
+        if (!(declared_type instanceof ClassType)) {
+            return false;
+        }
+
+        if (this.superclass !== null && this.superclass.compatibleWith(declared_type)) {
+            return true;
+        }
+        if (declared_type.superclass !== null && !must_exist_and_compatible(this.superclass, declared_type.superclass)) {
+            return false;
+        }
+        // for named types, compare by name
+        if (this.name !== null && declared_type.name !== null) {
+            return this.name === declared_type.name;
+        } else {
+            // if any one is an unnamed class (resulting from template), compare
+            // by structure
+            for (var name in declared_type.members) {
+                if (!must_exist_and_compatible(this.members[name], declared_type.members[name])) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    };
+
+/** Get the type of a particular member
  */
+ClassType.prototype.findMember = function(name) {
+    if (this.members[name] !== undefined) {
+        return this.members[name];
+    } else if (this.superclass === null) {
+        return null;
+    } else {
+        return this.superclass.findMember(name);
+    }
+};
+
+/** Get the types of all members, including inherited
+ */
+ClassType.prototype.getAllMembers = function () {
+    var base = this.superclass === null 
+        ? Object.create(null) 
+        : this.superclass.getAllMembers();
+    for (var name in this.members) {
+        base[name] = this.members[name];
+    }
+    return base;
+}
+
+module.exports.types = {
+    Type : Type,
+    ErrorType : ErrorType,
+    NativeType : NativeType,
+    ArrayType : ArrayType,
+    ClassType : ClassType,
+    FunctionType : FunctionType,
+};
+
+function Value(type, value) {
+    this.type = type;
+    this.value = value;
+}
+Value.prototype = {};
+Value.prototype.toString = function () {
+    return this.type.print(this.value);
+}
+
+module.exports.Value = Value;
+
 function copy_symbols(symbols) {
     var copy = Object.create(null);
     for (var name in symbols) {
@@ -19,38 +238,31 @@ function copy_symbols(symbols) {
 
 /** Ensure_that node is overloadable on symbols if it has new_type 
  */
-function check_overload(symbols, node, new_type) {
-    var name = node.name;
+function check_overload(symbols, name, new_type) {
     if (symbols[name] !== undefined) {
         if (!(new_type instanceof FunctionType)) {
-            node.error("Cannot overload a non-function");
+            throw new InterpreterError("Cannot overload a non-function", loc);
         }
         symbols[name].forEach(
             function (variant) {
                 if (variant instanceof ClassType) {
-                    node.error(name + " has already been declared as a class");
+                    throw new InterpreterError(name + " has already been declared as a class", loc);
                 } else if (variant instanceof Template) {
-                    node.error(name + " has already been declared as a template");
+                    throw new InterpreterError(name + " has already been declared as a template", loc);
                 } else if (variant.type instanceof FunctionType) {
                     if (
                         variant.type.parameter.compatibleWith(new_type.parameter)
                         || new_type.parameter.compatibleWith(variant.type.parameter)
                     ) {
-                        node.error("An overload of compatible parameter already exists.");
+                        throw new InterpreterError("An overload of compatible parameter already exists.", loc);
                     }
                 } else {
-                    node.error("Cannot overload a non-function");
+                    throw new InterpreterError("Cannot overload a non-function", loc);
                 }
             }
         );
     }
 }
-
-function NotImplementedException(message) {
-    this.name = "NotImplementedException";
-    this.message = message;
-}
-NotImplementedException.prototype = Object.create(Error.prototype);
 
 function generate_function_type(parameter_types, type) {
     if (parameter_types.length === 0) {
@@ -60,6 +272,71 @@ function generate_function_type(parameter_types, type) {
         parameter_types[0]
         , generate_function_type(parameter_types.slice(1), type)
     );
+}
+
+
+/** Make a copy of the symbol table to be stored in closures
+ * @param symbols
+ * @return object
+ */
+function Node() {}
+Node.prototype = {
+    error : function (message) {
+        throw new InterpreterError(message, this.location);
+    }
+};
+
+function TypeExpression() {}
+TypeExpression.prototype = Node.prototype;
+
+function TypeLiteral(type, loc) {
+    this.type = type;
+    this.location = loc;
+}
+TypeLiteral.prototype = Object.create(TypeExpression.prototype);
+TypeLiteral.prototype.evaluate = function () {
+    return this.type;
+};
+TypeLiteral.prototype.toString = function () {
+    return this.type.toString();
+}
+
+function ArrayTypeExpression(elements, loc) {
+    this.elements = elements;
+    this.location = loc;
+}
+ArrayTypeExpression.prototype = Object.create(TypeExpression.prototype);
+ArrayTypeExpression.prototype.evaluate = function (symbols) {
+    return new ArrayType(this.elements.evaluate(symbols));
+};
+ArrayTypeExpression.prototype.toString = ArrayType.prototype.toString;
+
+function FunctionTypeExpression(parameter, r, loc) {
+    this.parameter = parameter;
+    this.return = r;
+    this.location = loc;
+}
+FunctionTypeExpression.prototype = Object.create(TypeExpression.prototype);
+FunctionTypeExpression.prototype.evaluate = function (symbols) {
+    return new FunctionType(this.parameter.evaluate(symbols), this.return.evaluate(symbols));
+};
+FunctionTypeExpression.prototype.toString = FunctionType.prototype.toString;
+
+function IdentifierTypeExpression(qualified_id, loc) {
+    this.name = qualified_id;
+    this.location = loc;
+}
+IdentifierTypeExpression.prototype = Object.create(TypeExpression.prototype);
+IdentifierTypeExpression.prototype.evaluate = function (symbols) {
+    var ans = (new Identifier(this.name, this.location))
+        .evaluate(symbols, true, undefined, true);
+    if (!(ans instanceof Type)) {
+        this.error("Non-type argument specified in type context");
+    }
+    return ans;
+};
+IdentifierTypeExpression.prototype.toString = function () {
+    return this.name.toString();
 }
 
 function Article(segments, loc) {
@@ -81,14 +358,11 @@ function Article(segments, loc) {
     this.location = loc;
 }
 Article.prototype = Object.create(Node.prototype);
-// transitional, symbols param to be removed when import is implemented
-Article.prototype.evaluate = function (symbols) {
+Article.prototype.evaluate = function (symbols, no_std) {
+    if (!no_std) {
+        load_std_lib(symbols);
+    }
     // parse all segments
-    var dummy_location = {
-        name : "<internal>",
-        start : {offset : 0, line : 0, column : 0},
-        end : {offset : 0, line : 0, column : 0},
-    };
     var intermediates = this.segments.map(
         function (segment) {
             if (typeof segment === "string") {
@@ -137,14 +411,76 @@ Article.prototype.evaluate = function (symbols) {
 function Declaration() {}
 Declaration.prototype = Object.create(Node.prototype);
 
-function Import(from, to, loc) {
+var do_import;
+(function () {
+    var cache = Object.create(null);
+    do_import = function (from, loc) {
+        var file;
+        if (from.charAt(0) === '@') {
+            file = 'articles/' + from.substring(1);
+        } else {
+            file = 'libraries/' + from;
+        }
+        if (cache[file] === undefined) {
+            var title = from.replace(/^@/, '');
+            var text;
+            try {
+                var fs = require('fs');
+                text = fs.readFileSync(file, 'utf8');
+            } catch (e) {
+                throw new InterpreterError("The article/library to import " + title + " does not exist", loc);
+            }
+            
+            var symbols = Object.create(null);
+            require('./parser').parse(text, {title : title}).evaluate(symbols, from === 'std');
+            cache[file] = symbols;
+        }
+        return cache[file];
+    };
+})();
+
+var dummy_location = {
+    name : "<internal>",
+    start : {offset : 0, line : 0, column : 0},
+    end : {offset : 0, line : 0, column : 0},
+};
+
+function load_std_lib(symbols) {
+    var std = do_import('std', dummy_location);
+    for (var i in std) {
+        symbols[i] = std[i];
+    }
+}
+
+function Import(from, identifier, to, loc) {
     this.from = from;
+    this.identifier = identifier;
     this.to = to;
     this.location = loc;
 }
+
 Import.prototype = Object.create(Declaration.prototype);
-Import.prototype.declare = function () {
-    throw new NotImplementedException();
+Import.prototype.declare = function (symbols) {
+    var import_symbols = do_import(from, this.location);
+    if (import_symbols[this.identifier] === undefined) {
+        this.error(this.identifier + " does not exist in imported article");
+    }
+    if (this.to === null) {
+        this.to = this.identifier;
+    }
+    import_symbols[this.identifier].forEach(
+        function (overload) {
+            if (overload instanceof Value) {
+                check_overload(symbols, this.to, overload.type, this.location);
+                symbols[this.to].push(overload);
+            } else {
+                if (symbols[this.to] !== undefined) {
+                    this.error(this.to + " has already been declared");
+                }
+                symbols[this.to] = [overload];
+            }
+        }
+    );
 }
 
 function Class(name, superclass, members, loc) {
@@ -230,7 +566,7 @@ Variable.prototype.evaluate = function (symbols, check_only) {
              )
              , this.type.evaluate(symbols)
          );
-         check_overload(symbols, this, type);
+         check_overload(symbols, this.name, type, this.location);
          if (symbols[this.name] === undefined) {
              symbols[this.name] = [];
          }
@@ -248,7 +584,7 @@ Variable.prototype.evaluate = function (symbols, check_only) {
 };
 Variable.prototype.declare = function (symbols, check_only) {
     var initialiser = this.evaluate(symbols, check_only);
-    check_overload(symbols, this, initialiser.type);
+    check_overload(symbols, this.name, initialiser.type, this.location);
     if (symbols[this.name] === undefined) {
         symbols[this.name] = [initialiser];
     } else {
@@ -295,7 +631,11 @@ Program.prototype.evaluate = function (symbols, check_only) {
             child.declare(symbols, check_only);
         }
     );
-    return this.expression.evaluate(symbols, check_only);
+    if (this.expression === null) {
+        return new Value(NativeType.Null, null);
+    } else {
+        return this.expression.evaluate(symbols, check_only);
+    }
 };
 
 function Update(object, update, loc) {
@@ -776,3 +1116,41 @@ ErrorExpression.prototype.evaluate = function (symbols, check_only) {
         return new Value(new ErrorType(), undefined);
     }
 };
+
+module.exports.nodes = {
+    Node : Node,
+
+    TypeExpression : TypeExpression,
+    TypeLiteral : TypeLiteral,
+    ArrayTypeExpression : ArrayTypeExpression,
+    FunctionTypeExpression : FunctionTypeExpression,
+    IdentifierTypeExpression : IdentifierTypeExpression,
+    
+    Article : Article,
+
+    Declaration : Declaration,
+    Import : Import,
+    Class : Class,
+    Variable : Variable,
+    Template : Template,
+
+    Expression : Expression,
+    Program : Program,
+    Update : Update,
+    Call : Call,
+    Literal : Literal,
+    ArrayLiteral : ArrayLiteral,
+    Identifier : Identifier,
+    FunctionExpression : FunctionExpression,
+    If : If,
+    Native : Native,
+    TemplateApplication : TemplateApplication,
+    Member : Member,
+    Instance : Instance,
+    Cast : Cast,
+    ErrorExpression : ErrorExpression,
+
+};
+
+module.exports.load_std_lib = load_std_lib;
+

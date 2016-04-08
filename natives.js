@@ -136,4 +136,4 @@ var natives = {
 };
 
 
-
+module.exports = natives;

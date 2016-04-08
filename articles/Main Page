@@ -1,0 +1,7 @@
+This is the main page of functional wiki
+#code#
+emphasis (text "This is some emphasised text")
+#end#
+#code#
+strong (text "This is some strong text")
+#end#

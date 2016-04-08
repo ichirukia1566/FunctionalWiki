@@ -1,13 +1,18 @@
 {
+    // vim: filetype=javascript
+    
+    var interpreter = require('./interpreter');
+    var nodes = interpreter.nodes;
+    var types = interpreter.types;
+
     function named_location() {
         var l = location();
         l.title = options.title;
         return l;
     }
 
-    // vim: filetype=javascript
     function binary_operator(op, a, b, loc) {
-        return new Call(new Call(new Identifier(op, loc), a, loc), b, loc);
+        return new nodes.Call(new nodes.Call(new nodes.Identifier(op, loc), a, loc), b, loc);
     }
     
     function left_assoc(head, tail, loc) {
@@ -27,7 +32,7 @@
         if (template_parameters === null) {
             return node;
         } else {
-            var ans = new Template(node.name, template_parameters, node, node.location);
+            var ans = new nodes.Template(node.name, template_parameters, node, node.location);
             node.name = null;
             return ans;
         }
@@ -35,20 +40,21 @@
 }
 
 head = x:('#code#' p:program '#end#' { return p; }/ passthrough)* {
-    return new Article(x, named_location());
+    return new nodes.Article(x, named_location());
 }
 
 passthrough = $(!'#code#' .)
 
 program
-    = _ imports:import* declarations:declaration* expression:expression {
-        return new Program(imports, declarations, expression, named_location());
+    = _ imports:import* declarations:declaration* expression:expression? {
+        return new nodes.Program(imports, declarations, expression, named_location());
     }
 
 import
-    = "@import" _ from:qualified_identifier to:identifier? ";" _ { 
-        return new Import(from, to, named_location());
+    = "@import" _ from:source '.' _ i:identifier to:identifier? ';' _ {
+        return new nodes.Import(from, i, to, named_location());
     }
+
 
 declaration
     = class_declaration
@@ -59,7 +65,7 @@ class_declaration
         name:identifier superclass:(":" _ type)? 
         "{" _ members:member_declaration* "}" _ { 
             return generate_template(
-                new Class(name, superclass === null ? null : superclass[2], members, named_location())
+                new nodes.Class(name, superclass === null ? null : superclass[2], members, named_location())
                 , t === null ? null : t[2]
             );
         }
@@ -69,7 +75,7 @@ variable_declaration
         name:identifier p:("(" _ parameter_list ")" _ )? type:(":" _ type)? 
         initialiser:initialiser { 
             return generate_template(
-                new Variable(
+                new nodes.Variable(
                     name,
                     p === null ? [] : p[2],
                     type === null ? null : type[2], 
@@ -83,7 +89,7 @@ variable_declaration
 member_declaration
     = "@var" _ name:identifier p:("(" _ parameter_list ")" _ )? ":" _ type:type 
         initialiser:(initialiser / (";" _ )) { 
-            return new Variable(
+            return new nodes.Variable(
                 name, 
                 p === null ? [] : p[2],
                 type, 
@@ -189,7 +195,7 @@ unary_expression
     / op:("+" / "-" / "~") _ expr:unary_expression { 
         if (op == "+") op = "++";
         if (op == "-") op = "--";
-        return new Call(new Identifier(op, named_location()), expr, named_location());
+        return new nodes.Call(new nodes.Identifier(op, named_location()), expr, named_location());
     }   
     
 postfix_expression
@@ -198,7 +204,7 @@ postfix_expression
             if (tail.length === 0) {
                 return head;
             } else {
-                return new Call(
+                return new nodes.Call(
                     recursion(head, tail.slice(0, tail.length - 1))
                     , tail[tail.length - 1]
                     , named_location()
@@ -237,13 +243,13 @@ member_expression
                 return head;
             } else {
                 if (tail[tail.length - 1][0] === '.') {
-                    return new Member(
+                    return new nodes.Member(
                         recursion(head, tail.slice(0, tail.length - 1))
                         , tail[tail.length - 1][2]
                         , named_location()
                     );
                 } else {
-                    return new Update(
+                    return new nodes.Update(
                         recursion(head, tail.slice(0, tail.length - 1))
                         , tail[tail.length - 1]
                         , named_location()
@@ -256,10 +262,14 @@ member_expression
 
 template_application 
     = i:identifier '<' _ t:template_arguments_list '>' _ {
-        return new TemplateApplication(new Identifier(i, named_location()), t, named_location());
+        return new nodes.TemplateApplication(
+            new nodes.Identifier(i, named_location())
+            , t
+            , named_location()
+        );
     }
     / i:identifier { 
-        return new Identifier(i, named_location());
+        return new nodes.Identifier(i, named_location());
     }
 
 atom
@@ -278,37 +288,40 @@ atom
 if_expression
     = "@if" _ '(' _ cond:expression ',' _ then:expression ',' _
         e:expression ')' _ {
-            return new If(cond, then, e, named_location());
+            return new nodes.If(cond, then, e, named_location());
         }
 
 instance_expression
     = "@instance" _ '(' _ object:expression ',' _ type:type ')' _ {
-        return new Instance(object, type, named_location());
+        return new nodes.Instance(object, type, named_location());
     }
 
 cast_expression
     = "@cast" _ '(' _ object:expression ',' _ type:type ',' _ e:expression')' _ {
-        return new Cast(object, type, e, named_location());
+        return new nodes.Cast(object, type, e, named_location());
     }
 
 error_expression
     = "@error" _ '(' _ message:string_literal ')' _ {
-        return new ErrorExpression(message.object.value.join(""), named_location());
+        return new nodes.ErrorExpression(message.object.value.join(""), named_location());
     }
 
 built_in_type
     = t:("@Character" / "@Integer" / "@Float" / "@Boolean" / "@Null") _ {
-        return new TypeLiteral(NativeType[t.substr(1)], named_location());
+        return new nodes.TypeLiteral(
+            types.NativeType[t.substr(1)]
+            , named_location()
+        );
     }
 
 native_expression
     = '@native' _ '(' _ i:identifier ':' _ t:type ')' _ {
-        return new Native(i, t, named_location());
+        return new nodes.Native(i, t, named_location());
     }
 
 function_expression
     = '@function' _ p:('(' _ parameter_list ')'_ )? t:(':' _ type)? '{' _ e:program '}' _ {
-        return new FunctionExpression(
+        return new nodes.FunctionExpression(
             p === null ? [] : p[2]
             , t === null ? null : t[2]
             , e
@@ -316,21 +329,9 @@ function_expression
         );
     }
     
-qualified_identifier
-    = head:(
-        ("." _)? (
-            i:identifier {return {source : "internal", path : [i]};}
-            / s:string_literal {return {source : "external", path : [s.value]};}
-        )
-    ) tail:("."  identifier)+ {
-        var ans = head[1];
-        tail.forEach(
-            function (o) {
-                ans.path.push(o[2]);
-            }
-        );
-        return ans;
-    }
+source
+    = i:identifier {return i;}
+    / s:string_literal {return '@' + s.value.join('');}
 
 identifier
     = i:$ ([_a-zA-Z\xA0-\uFFFF][_a-zA-Z0-9\xA0-\uFFFF]*) _ {
@@ -347,18 +348,22 @@ identifier
 type = s:(
     built_in_type
     / '[' _ t:type ']' _ {
-        return new ArrayTypeExpression(t, named_location());
+        return new nodes.ArrayTypeExpression(t, named_location());
     }
     / '(' _ t:type ')' _ { return t; }
     / m:identifier {
-        return new IdentifierTypeExpression(m, named_location());
+        return new nodes.IdentifierTypeExpression(m, named_location());
     }
 )+ {
     function recursion(s) {
         if (s.length === 1) {
             return s[0];
         } else {
-            return new FunctionTypeExpression(s[0], recursion(s.slice(1)), named_location());
+            return new nodes.FunctionTypeExpression(
+                s[0]
+                , recursion(s.slice(1))
+                , named_location()
+            );
         }
     }
     return recursion(s);
@@ -374,17 +379,17 @@ literal
 char_literal
     = "'" c:(char / '"') "'" _
         {
-            return new Literal(
-                new Value(NativeType.Character, c)
+            return new nodes.Literal(
+                new interpreter.Value(types.NativeType.Character, c)
                 , named_location()
             );
         }
 
 string_literal
     = "\"" c:(char / "'")* "\"" _ {
-        return new Literal(
-            new Value(
-                new ArrayType(NativeType.Character)
+        return new nodes.Literal(
+            new interpreter.Value(
+                new types.ArrayType(types.NativeType.Character)
                 , c
             )
             , named_location()
@@ -396,7 +401,12 @@ float_literal
         ([0-9]+ "." [0-9]* / "." [0-9]+) ([eE] [+-]? [0-9]+)? 
         / [0-9]+_ [eE] [+-]? [0-9]+
     ) _ {
-        return new Literal(new Value(NativeType.Float, parseFloat(text())), named_location());
+        return new nodes.Literal(
+            new interpreter.Value(
+                types.NativeType.Float
+                , parseFloat(text())
+            ), named_location()
+        );
     }
     
 int_literal
@@ -405,16 +415,20 @@ int_literal
         if ((value | 0) !== value) {
             error("Integer literal out of bound");
         }
-        return new Literal(new Value(NativeType.Integer, value, named_location()));
+        return new nodes.Literal(
+            new interpreter.Value(
+                types.NativeType.Integer, value, named_location()
+            )
+        );
     }
 
 array_literal
     = '[' _ es:(e:expression ',' _ {return e;})* ']' _ {
-        return new ArrayLiteral(es, named_location());
+        return new nodes.ArrayLiteral(es, named_location());
     }
     / '[' _ head:(e:expression ',' _ {return e;})* tail:expression ']' _ {
         head.push(tail);
-        return new ArrayLiteral(head, named_location());
+        return new nodes.ArrayLiteral(head, named_location());
     }
 
 char
