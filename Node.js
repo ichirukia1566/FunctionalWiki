@@ -615,10 +615,44 @@ function Native(name, type, loc) {
 }
 Native.prototype = Object.create(Expression.prototype);
 Native.prototype.evaluate = function (symbols, check_only) {
-    return new Value(
-        this.type.evaluate(symbols)
-        , check_only ? undefined : natives[this.name](symbols, this.location)
-    );
+    function cast(type, value) {
+        if (type instanceof NativeType) {
+            if (type.compatibleWith(NativeType.Integer)) {
+                return value | 0;
+            }
+            if (type.compatibleWith(NativeType.Float)) {
+                return Number(value);
+            }
+            if (type.compatibleWith(NativeType.Character)) {
+                return [...String(value)][0];
+            }
+            if (type.compatibleWith(NativeType.Boolean)) {
+                return Boolean(value);
+            }
+            if (type.compatibleWith(NativeType.Null)) {
+                return null;
+            }
+        }
+        if (type instanceof ArrayType) {
+            if (!(value instanceof Array)) {
+                value = [value];
+            }
+            return value.map(
+                function (element) {
+                    return cast(type.elements, element);
+                }
+            );
+        }
+        return value;
+    }
+    var value;
+    if (check_only) {
+        value = undefined;
+    } else {
+        value = natives[this.name](symbols, this.location);
+    }
+    var type = this.type.evaluate(symbols);
+    return new Value(type, cast(type, value));
 };
 
 function TemplateApplication(template, args, loc) {
