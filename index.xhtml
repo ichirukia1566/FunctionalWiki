@@ -148,7 +148,8 @@
 @var @operator*(lhs : @Integer, rhs : @Integer) : @Integer = @native(times_int : @Integer);
 @var @operator*(lhs : @Float, rhs : @Float) : @Float = @native(times : @Float);
 @var @operator/(lhs : @Float, rhs : @Float) : @Float = @native(over : @Float);
-@var @operator/(lhs : @Integer, rhs : @Integer) : @Integer = integer (float lhs / float rhs);
+@var @operator/(lhs : @Integer, rhs : @Integer) : @Integer
+    = @if (rhs == 0, @error("division by 0"), integer (float lhs / float rhs));
 @var @operator%(lhs : @Integer, rhs : @Integer) : @Integer = @native(mod : @Integer);
 @var @operator%(lhs : @Float, rhs : @Float) : @Float = @native(mod : @Float);
 @var isnan(x : @Float) = @native(isnan : @Float);

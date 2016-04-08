@@ -1,0 +1,7 @@
+#code#
+@var recursion(l : @Integer) : @Integer {
+    @if (l == 0, 1 / l, recursion (l - 1))
+}
+
+recursion 5
+#end#
