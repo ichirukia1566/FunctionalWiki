@@ -495,16 +495,17 @@ function Class(name, superclass, members, loc) {
 }
 Class.prototype = Object.create(Declaration.prototype);
 Class.prototype.evaluate = function (symbols) {
+    var node = this;
     var class_type = new ClassType(
-        this.name
-        , this.superclass === null ? null : this.superclass.evaluate(symbols)
+        node.name
+        , node.superclass === null ? null : node.superclass.evaluate(symbols)
         , Object.create(null)
         , Object.create(null)
     );
-    this.members.forEach(
+    node.members.forEach(
         function (member) {
             if (class_type.findMember(member.name) !== null) {
-                this.error(member.name + " has already been declared");
+                node.error(member.name + " has already been declared");
             }
             class_type.members[member.name] 
                 = generate_function_type(
@@ -527,11 +528,11 @@ Class.prototype.evaluate = function (symbols) {
                         class_type.members[member.name]
                     )
                 ) {
-                    this.error(
+                    node.error(
                         "Default value of member " 
                         + member.name 
                         + " in class " 
-                        + this.name 
+                        + node.name 
                         + " is not compatible with its declared type."
                     );
                 }
@@ -658,10 +659,10 @@ Update.prototype.evaluate = function (symbols, check_only) {
                 var init = assignment.value.evaluate(symbols, check_only);
                 var member_type = new_object.type.findMember(name);
                 if (member_type === null) {
-                    this.error("Member " + name + " does not exist");
+                    node.error("Member " + name + " does not exist");
                 }
                 if (!init.type.compatibleWith(member_type)) {
-                    this.error("Member " + name + " has the wrong type");
+                    node.error("Member " + name + " has the wrong type");
                 }
                 new_object.value[name] = init.value;
             }
@@ -690,7 +691,7 @@ Update.prototype.evaluate = function (symbols, check_only) {
                     c = c.superclass;
                 }
                 if (initialiser === undefined) {
-                    this.error(
+                    node.error(
                         "Member " 
                         + name 
                         + " has no default value. A user-supplied value must be given."

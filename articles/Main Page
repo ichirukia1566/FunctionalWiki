@@ -6,7 +6,7 @@ emphasis (text "This is some emphasised text")
 strong (text "This is some strong text")
 #end#
 
-Here are the factorials from 0 to 10:
+Here are the #code#link "factorial" (text "factorials")#end# from 0 to 10:
 #code#
 @import "factorial".factorial;
 
@@ -16,3 +16,5 @@ table (
         (range 0 10)
 )
 #end#
+
+Do you know what's #code#external_link "http://en.wikipedia.org/" (strong (text "Wikipedia"))#end# ?

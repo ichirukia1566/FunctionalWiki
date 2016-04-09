@@ -29,23 +29,32 @@ module.exports.plain_text = function plain_text_generator(value) {
         quote = '='.repeat(value.level);
     }
     if (quote !== undefined) {
-        return quote + plain_text_generator(value.content, symbols) + quote;
+        return quote + plain_text_generator(value.content) + quote;
     }
     if (type.compatibleWith(symbols['Table'][0])) {
         return value.cells.map(
             function (row) {
                 return row.map(
                     function (cell) {
-                        return plain_text_generator(cell, symbols);
+                        return plain_text_generator(cell);
                     }
                 ).join('\t');
             }
         ).join('\n');
     }
+    if (type.compatibleWith(symbols['InternalLink'][0])) {
+        return plain_text_generator(value.content) 
+    }
+    if (type.compatibleWith(symbols['ExternalLink'][0])) {
+        return plain_text_generator(value.content) 
+            + ' [' 
+            + value.url.join('') 
+            + ']';
+    }
     if (type.compatibleWith(symbols['TextSequence'][0])) {
         return value.content.map(
             function (segment) {
-                return plain_text_generator(segment, symbols);
+                return plain_text_generator(segment);
             }
         ).join('');
     }

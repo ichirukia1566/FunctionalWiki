@@ -219,7 +219,7 @@ member_update
         return [];
     }
     / '{' head:member_assignment tail:(
-            ','/';' _ x:member_assignment {return x;}
+            (','/';') _ x:member_assignment {return x;}
         )* '}' _ 
     {
         tail.unshift(head);

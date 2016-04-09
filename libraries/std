@@ -173,7 +173,7 @@
     @var content : InlineText;
 }
 
-@var cell(content : Text) = TableCell {content = content};
+@var cell(content : InlineText) = TableCell {content = content};
 
 @class Table : Text {
     @var cells : [[TableCell]];
@@ -192,6 +192,22 @@
 @class TextSequence : Text {
     @var content : [Text];
 }
+
+@class InternalLink : InlineText {
+    @var content : InlineText;
+    @var target : [@Character];
+}
+
+@var link(target : [@Character], content : InlineText)
+    = InternalLink {target = target; content = content};
+
+@class ExternalLink : InlineText {
+    @var content : InlineText;
+    @var url : [@Character];
+}
+
+@var external_link(url : [@Character], content : InlineText)
+    = ExternalLink {url = url, content = content};
 
 @var text(x : [@Character]) = PlainText {content = x};
 @var text(x : @Integer) = text (string x);
