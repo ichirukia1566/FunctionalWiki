@@ -55,6 +55,9 @@ import
         return new nodes.Import(from, i, to, named_location());
     }
 
+source
+    = i:identifier {return i;}
+    / s:string_literal {return '@' + s.object.value.join('');}
 
 declaration
     = class_declaration
@@ -268,17 +271,16 @@ template_application
             , named_location()
         );
     }
-    / i:identifier { 
-        return new nodes.Identifier(i, named_location());
-    }
-
+    
 atom
     = literal
     / template_application
+    / i:identifier { 
+        return new nodes.Identifier(i, named_location());
+    }
     / '(' _ e:expression ')' _ {
         return e;
     }
-    / function_expression
     / native_expression
     / if_expression
     / instance_expression
@@ -318,20 +320,6 @@ native_expression
     = '@native' _ '(' _ i:identifier ':' _ t:type ')' _ {
         return new nodes.Native(i, t, named_location());
     }
-
-function_expression
-    = '@function' _ p:('(' _ parameter_list ')'_ )? t:(':' _ type)? '{' _ e:program '}' _ {
-        return new nodes.FunctionExpression(
-            p === null ? [] : p[2]
-            , t === null ? null : t[2]
-            , e
-            , named_location()
-        );
-    }
-    
-source
-    = i:identifier {return i;}
-    / s:string_literal {return '@' + s.object.value.join('');}
 
 identifier
     = i:$ ([_a-zA-Z\xA0-\uFFFF][_a-zA-Z0-9\xA0-\uFFFF]*) _ {
@@ -375,6 +363,7 @@ literal
     / float_literal
     / int_literal
     / array_literal
+    / function_literal
     
 char_literal
     = "'" c:(char / '"') "'" _
@@ -431,6 +420,16 @@ array_literal
         return new nodes.ArrayLiteral(head, named_location());
     }
 
+function_literal
+    = '@function' _ p:('(' _ parameter_list ')'_ )? t:(':' _ type)? '{' _ e:program '}' _ {
+        return new nodes.FunctionExpression(
+            p === null ? [] : p[2]
+            , t === null ? null : t[2]
+            , e
+            , named_location()
+        );
+    }
+    
 char
     = $ ((! ('\\' / '"' / "'")) .)
     / "\\" tail:(
