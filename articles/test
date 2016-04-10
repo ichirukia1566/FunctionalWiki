@@ -1,0 +1,12 @@
+This is a text page of functional wiki.
+#code#
+emphasis (text "This is some emphasised text.")
+#end#
+#code#
+strong (text "This is some strong text.")
+#end#
+
+The factorial of 6 is #code#
+@var factorial(n : @Integer) : @Integer = @if (n > 0, n * factorial(n - 1), 1);
+factorial 6
+#end#.
