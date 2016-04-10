@@ -1,0 +1,13 @@
+.sidebar1 {
+	float: left;
+	width: 199px;
+	padding: 10px 0 0 0;
+	
+}
+.sidebar1 ul, .sidebar1 ol { 
+	padding: 0 15px 15px 40px; 
+}
+.container {
+	width: 960px;
+	margin: 0 auto; 
+}

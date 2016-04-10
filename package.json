@@ -1,18 +1,17 @@
 {
   "name": "functional_wiki",
   "version": "0.0.0",
-  "description": "",
   "main": "app.js",
   "directories": {
     "test": "tests"
   },
   "scripts": {
-    "install" : "node_modules/.bin/pegjs parser.pegjs",
+    "install": "pegjs parser.pegjs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/ichirukia1566/FunctionalWiki.git"
+    "url": "git+https://github.com/ichirukia1566/FunctionalWiki.git"
   },
   "author": "",
   "license": "BSD-2-Clause",
@@ -23,5 +22,8 @@
     "express": "~4.13.4",
     "pegjs": "~0.9.0"
   },
-  "engine": "node >= 5.0.0"
+  "engine": "node >= 5.0.0",
+  "homepage": "https://github.com/ichirukia1566/FunctionalWiki#readme",
+  "devDependencies": {},
+  "description": ""
 }
