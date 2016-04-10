@@ -275,10 +275,6 @@ function generate_function_type(parameter_types, type) {
 }
 
 
-/** Make a copy of the symbol table to be stored in closures
- * @param symbols
- * @return object
- */
 function Node() {}
 Node.prototype = {
     error : function (message) {
