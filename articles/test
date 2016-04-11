@@ -6,7 +6,19 @@ emphasis (text "This is some emphasised text.")
 strong (text "This is some strong text.")
 #end#
 
-The factorial of 6 is #code#
-@var factorial(n : @Integer) : @Integer = @if (n > 0, n * factorial(n - 1), 1);
-factorial 6
-#end#.
+The result of code "
+@import "factorial".factorial;
+
+table (
+    map<@Integer, [TableCell]> 
+        @function (x : @Integer) {[cell (text x), cell (text (factorial x))]}
+        (range 0 10)
+)" is #code#
+@import "factorial".factorial;
+
+table (
+    map<@Integer, [TableCell]> 
+        @function (x : @Integer) {[cell (text x), cell (text (factorial x))]}
+        (range 0 10)
+)
+#end#

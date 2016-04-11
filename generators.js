@@ -43,7 +43,7 @@ module.exports.plain_text = function plain_text_generator(value) {
         ).join('\n');
     }
     if (type.compatibleWith(symbols['InternalLink'][0])) {
-        return plain_text_generator(value.content) 
+        return plain_text_generator(value.content);
     }
     if (type.compatibleWith(symbols['ExternalLink'][0])) {
         return plain_text_generator(value.content) 
@@ -64,7 +64,7 @@ module.exports.plain_text = function plain_text_generator(value) {
 module.exports.html_text = function html_text_generator(value) {
     var type = value['@class'];
     if (type.compatibleWith(symbols['PlainText'][0])) {
-        return value.content.join('');
+        return ((value.content.join('')).split("\n").join("<br>\n")).split(" ").join("&nbsp;");
     }
     var start_tag;
     var end_tag;
@@ -81,8 +81,8 @@ module.exports.html_text = function html_text_generator(value) {
         end_tag = '';
     }
     if (type.compatibleWith(symbols['TableCell'][0])) {
-        start_tag = '|';
-        end_tag = '|';
+        start_tag = "<td>";
+        end_tag = "</td>";
     }
     if (type.compatibleWith(symbols['Heading'][0])) {
         if (value.level <= 6) {
@@ -98,15 +98,26 @@ module.exports.html_text = function html_text_generator(value) {
         return start_tag + html_text_generator(value.content, symbols) + end_tag;
     }
     if (type.compatibleWith(symbols['Table'][0])) {
-        return value.cells.map(
+        return ("\n<table>\n" + value.cells.map(
             function (row) {
-                return row.map(
+                return ("<tr>\n" + row.map(
                     function (cell) {
                         return html_text_generator(cell, symbols);
                     }
-                ).join('\t');
-            }
-        ).join('\n');
+                ).join('\n') + "\n</tr>");
+            } 
+        ).join('\n') + "\n</table>\n");
+    }
+    if (type.compatibleWith(symbols['InternalLink'][0])) {
+        return ("<a href=\"/" + value.target.join('') + "\">" + html_text_generator(value.content) + "</a>"); 
+    }
+    if (type.compatibleWith(symbols['ExternalLink'][0])) {
+        return ("<a href=\"" + value.url.join('') + "\">" + html_text_generator(value.content) + "</a>");
+
+        /*plain_text_generator(value.content) 
+            + ' [' 
+            + value.url.join('') 
+            + ']';*/
     }
     if (type.compatibleWith(symbols['TextSequence'][0])) {
         return value.content.map(
