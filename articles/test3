@@ -1,0 +1,3 @@
+#code#
+apply_style ([style "color" "darkolivegreen", style "font-weight" "bold"]) (text "style")
+#end#
