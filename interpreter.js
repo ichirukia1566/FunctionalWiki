@@ -17,9 +17,10 @@ InterpreterError.prototype.toString = function () {
         this.message 
         + "\n\n"
         + "Call stack:\n";
+    var layers = this.call_stack.length - 1;
     this.call_stack.forEach(
         function (layer, index) {
-            message += "#" + index + ": file " + layer.title + " line " + layer.start.line + " column " + layer.start.column + "\n";
+            message += "#" + (layers - index) + ": file " + layer.title + " line " + layer.start.line + " column " + layer.start.column + "\n";
         }
     );
     return message;
