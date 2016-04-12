@@ -38,7 +38,7 @@ app.get(
                 res.status(500);
                 //res.set('Content-Type', 'text/plain; encoding=utf-8'); // plain_text
                 //res.send(e.toString()); // plain_text
-                res.write(html_head + e.toString() + html_tail); // html
+                res.write(html_head + e.toString().replace(/\n/g, '<br>') + html_tail); // html
                 
             }
             res.end();
