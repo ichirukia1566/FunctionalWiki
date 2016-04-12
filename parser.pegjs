@@ -221,7 +221,7 @@ member_update
     = '{' _ '}' _ {
         return [];
     }
-    / '{' head:member_assignment tail:(
+    / '{' _ head:member_assignment tail:(
             (','/';') _ x:member_assignment {return x;}
         )* '}' _ 
     {

@@ -29,6 +29,11 @@ app.get(
                 //res.send(generators.plain_text(result.value)); // plain_text
                 res.write(html_head + generators.html_text(result.value) + html_tail); // html
             } catch (e) {
+                if (e.name === 'SyntaxError') {
+                    e.toString = function () {
+                        return 'SyntaxError:\n' + e.message + '\n\n' + 'at line ' + e.location.start.line + ' column ' + e.location.start.column;
+                    }
+                }
                 console.log(e);
                 res.status(500);
                 //res.set('Content-Type', 'text/plain; encoding=utf-8'); // plain_text
