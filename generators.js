@@ -77,20 +77,24 @@ module.exports.html_text = function html_text_generator(value) {
         end_tag = "</em>";
     }
     if (type.compatibleWith(symbols['StyledText'][0])) {
-        start_tag = '';
-        end_tag = '';
+        start_tag = "<span style=\"" + value.styles.map(
+            function (sty) {
+                return sty.property.join('') + ":" + sty.value.join('') + ";"
+            }
+        ).join('') + "\">";
+        end_tag = "</span>";
     }
     if (type.compatibleWith(symbols['TableCell'][0])) {
         start_tag = "<td>";
         end_tag = "</td>";
     }
     if (type.compatibleWith(symbols['Heading'][0])) {
-        if (value.level <= 6) {
-            start_tag = "<h" + value.level + ">";
-            end_tag = "</h" + value.level + "><hr>\n";
+        if (value.level <= 3) {
+            start_tag = "<h" + (value.level + 1) + ">";
+            end_tag = "</h" + (value.level + 1) + "><hr>\n";
         } else {
-            start_tag = "<h6>";
-            end_tag = "</h6><hr>\n";
+            start_tag = "<h4>";
+            end_tag = "</h4><hr>\n";
         }
         
     }
