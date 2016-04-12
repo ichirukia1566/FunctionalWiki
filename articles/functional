@@ -1,0 +1,33 @@
+#code#
+
+@class Function {
+    @var function(x : @Integer, y : @Integer) : @Integer;
+    @var name : [@Character];
+}
+
+@var operations = [
+    Function { function = @operator+<@Integer>; name = "addition"; },
+    Function { function = @operator-<@Integer>; name = "subtraction"; },
+    Function { function = @operator*<@Integer>; name = "multiplication"; },
+    Function { function = @operator/<@Integer>; name = "integer division"; },
+    Function { 
+        function = @function {
+            @var power(x : @Integer, y : @Integer) : @Integer 
+                = @if (y == 0, 1, power x (y - 1) * x);
+            power
+        };
+        name = "power";
+    },
+];
+
+#end#
+The result of applying various operations on 5 and 3 are:
+#code#
+table
+    (map<Function, [TableCell]>
+        @function(x : Function) {
+            [cell (text x.name), cell (text (x.function 5 3))]
+        }
+        operations
+    )
+#end#
