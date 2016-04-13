@@ -27,3 +27,6 @@ Content 7#code#
 heading 8 (text "Title 8")
 #end#
 Content 8
+#code#
+boolean "x"
+#end#

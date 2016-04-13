@@ -92,6 +92,7 @@
 
 // Array functions
 @var<T> length(x : [T]) : @Integer = @native(length : @Integer);
+@var boolean(x : [@Character]) = boolean (length<@Character> x);
 @var<T> join(x : [T], y : [T]) : [T] = @native(join : [T]);
 @var<T> subarray(start : @Integer, end : @Integer, x : [T]) {
     @var l = length<T> x;
