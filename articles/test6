@@ -1,0 +1,4 @@
+#code#
+apply_style ([style "color" "darkolivegreen", style "font-weight" "bold"]) (text "Darkolivegreen bold text!")
+#end#
+        					
