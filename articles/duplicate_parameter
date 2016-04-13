@@ -1,0 +1,5 @@
+#code#
+@var f(x : @Integer, x : @Integer) = x;
+
+f 3 4
+#end#

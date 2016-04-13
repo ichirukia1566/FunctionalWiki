@@ -870,6 +870,17 @@ function FunctionExpression(parameters, type, body, loc) {
 FunctionExpression.prototype = Object.create(Expression.prototype);
 FunctionExpression.prototype.evaluate = function (symbols, check_only) {
     var node = this;
+    node.parameters.forEach(
+        function (p) {
+            node.parameters.forEach(
+                function (q) {
+                    if (p !== q && p.name === q.name) {
+                        node.error("Duplicate parameter name " + p.name);
+                    }
+                }
+            );
+        }
+    );
     function get_return_type(declared, actual) {
         if (declared !== null) {
             if (!actual.compatibleWith(declared)) {
