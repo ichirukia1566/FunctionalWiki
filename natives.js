@@ -1,42 +1,53 @@
 "use strict";
 
+function get_param(name, symbols) {
+    if (symbols[name] === undefined) {
+        if (symbols['@next'] === undefined) {
+            return undefined;
+        } else {
+            return get_param(name, symbols['@next']);
+        }
+    }
+    return symbols[name][0];
+}
+
 var natives = {
     noop : function (symbols) {
-        return symbols.x[0].value;
+        return get_param('x', symbols).value;
     },
     // type conversions
     ord : function (symbols) {
-        return symbols.x[0].value.codePointAt(0);
+        return get_param('x', symbols).value.codePointAt(0);
     },
     chr : function (symbols, loc) {
         try {
-            return String.fromCodePoint(symbols.x[0].value);
+            return String.fromCodePoint(get_param('x', symbols).value);
         } catch (e) {
             if (e instanceof RangeError) {
-                throw new InterpreterError("Invalid character code " + symbols.x[0].value, loc);
+                throw new InterpreterError("Invalid character code " + get_param('x', symbols).value, loc);
             } else {
                 throw e;
             }
         }
     },
     trunc : function (symbols) {
-        return symbols.x[0].value | 0;
+        return get_param('x', symbols).value | 0;
     },
     test_float : function (symbols) {
-        return symbols.x[0].value ? true : false;
+        return get_param('x', symbols).value ? true : false;
     },
     parseInt : function (symbols, loc) {
-        var x = parseInt(symbols.x[0].value.join(''), 10);
+        var x = parseInt(get_param('x', symbols).value.join(''), 10);
         if ((x | 0) !== x) {
-            throw new InterpreterError(symbols.x[0].value.join('') + " does not form a valid 32-bit integer", loc);
+            throw new InterpreterError(get_param('x', symbols).value.join('') + " does not form a valid 32-bit integer", loc);
         }
         return x;
     },
     parseFloat : function (symbols, loc) {
-        return parseFloat(symbols.x[0].value.join(''));
+        return parseFloat(get_param('x', symbols).value.join(''));
     },
     String : function (symbols) {
-        return [...String(symbols.x[0].value)];
+        return [...String(get_param('x', symbols).value)];
     },
     // Boolean constants
     true : function () {
@@ -50,34 +61,34 @@ var natives = {
     },
     // Math operators
     plus : function (symbols) {
-        return symbols.lhs[0].value + symbols.rhs[0].value;
+        return get_param('lhs', symbols).value + get_param('rhs', symbols).value;
     },
     plus_int : function (symbols) {
         return natives.plus(symbols) | 0;
     },
     minus : function (symbols) {
-        return symbols.lhs[0].value - symbols.rhs[0].value;
+        return get_param('lhs', symbols).value - get_param('rhs', symbols).value;
     },
     minus_int : function (symbols) {
         return natives.minus(symbols) | 0;
     },
     times : function (symbols) {
-        return symbols.lhs[0].value * symbols.rhs[0].value;
+        return get_param('lhs', symbols).value * get_param('rhs', symbols).value;
     },
     times_int : function (symbols) {
         return natives.times(symbols) | 0;
     },
     over : function (symbols) {
-        return symbols.lhs[0].value / symbols.rhs[0].value;
+        return get_param('lhs', symbols).value / get_param('rhs', symbols).value;
     },
     mod : function (symbols) {
-        return symbols.lhs[0].value % symbols.rhs[0].value;
+        return get_param('lhs', symbols).value % get_param('rhs', symbols).value;
     },
     isnan : function (symbols) {
-        return isnan(symbols.x[0].value);
+        return isnan(get_param('x', symbols).value);
     },
     negate : function (symbols) {
-        return -symbols.x[0].value;
+        return -get_param('x', symbols).value;
     },
     negate_int : function (symbols) {
         return natives.negate(symbols) | 0;
@@ -85,56 +96,56 @@ var natives = {
 
     // comparison
     greater : function (symbols) {
-        return symbols.lhs[0].value > symbols.rhs[0].value;
+        return get_param('lhs', symbols).value > get_param('rhs', symbols).value;
     },
     less : function (symbols) {
-        return symbols.lhs[0].value < symbols.rhs[0].value;
+        return get_param('lhs', symbols).value < get_param('rhs', symbols).value;
     },
     greater_equal : function (symbols) {
-        return symbols.lhs[0].value >= symbols.rhs[0].value;
+        return get_param('lhs', symbols).value >= get_param('rhs', symbols).value;
     },
     less_equal : function (symbols) {
-        return symbols.lhs[0].value <= symbols.rhs[0].value;
+        return get_param('lhs', symbols).value <= get_param('rhs', symbols).value;
     },
     equal : function (symbols) {
-        return symbols.lhs[0].value == symbols.rhs[0].value;
+        return get_param('lhs', symbols).value == get_param('rhs', symbols).value;
     },
     not_equal : function (symbols) {
-        return symbols.lhs[0].value != symbols.rhs[0].value;
+        return get_param('lhs', symbols).value != get_param('rhs', symbols).value;
     },
 
     // bitwise
     and : function (symbols) {
-        return symbols.lhs[0].value & symbols.rhs[0].value;
+        return get_param('lhs', symbols).value & get_param('rhs', symbols).value;
     },
     or : function (symbols) {
-        return symbols.lhs[0].value | symbols.rhs[0].value;
+        return get_param('lhs', symbols).value | get_param('rhs', symbols).value;
     },
     xor : function (symbols) {
-        return symbols.lhs[0].value ^ symbols.rhs[0].value;
+        return get_param('lhs', symbols).value ^ get_param('rhs', symbols).value;
     },
     not : function (symbols) {
-        return ~symbols.x[0].value;
+        return ~get_param('x', symbols).value;
     },
     shift_left : function (symbols) {
-        return symbols.lhs[0].value << symbols.rhs[0].value;
+        return get_param('lhs', symbols).value << get_param('rhs', symbols).value;
     },
     shift_right : function (symbols) {
-        return symbols.lhs[0].value >> symbols.rhs[0].value;
+        return get_param('lhs', symbols).value >> get_param('rhs', symbols).value;
     },
     shift_right_unsigned : function (symbols) {
-        return symbols.lhs[0].value >>> symbols.rhs[0].value;
+        return get_param('lhs', symbols).value >>> get_param('rhs', symbols).value;
     },
 
     // array
     length : function (symbols) {
-        return symbols.x[0].value.length;
+        return get_param('x', symbols).value.length;
     },
     join : function (symbols) {
-        return symbols.x[0].value.concat(symbols.y[0].value);
+        return get_param('x', symbols).value.concat(get_param('y', symbols).value);
     },
     subarray : function (symbols) {
-        return symbols.x[0].value.slice(symbols.start[0].value, symbols.end[0].value);
+        return get_param('x', symbols).value.slice(get_param('start', symbols).value, get_param('end', symbols).value);
     },
 };
 

@@ -1,0 +1,12 @@
+#code#
+@var x = 3;
+
+@function (x : @Integer) {
+    @function {
+        @var x = 5;
+        x
+    } + x
+} (x + 1)
+// should be 9
+
+#end#

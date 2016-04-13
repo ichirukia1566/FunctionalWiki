@@ -225,6 +225,12 @@ Value.prototype.toString = function () {
 
 module.exports.Value = Value;
 
+function new_scope(symbols) {
+    var copy = Object.create(null);
+    copy['@next'] = symbols;
+    return copy;
+}
+
 function copy_symbols(symbols) {
     var copy = Object.create(null);
     for (var name in symbols) {
@@ -239,7 +245,7 @@ function copy_symbols(symbols) {
 
 /** Ensure_that node is overloadable on symbols if it has new_type 
  */
-function check_overload(symbols, name, new_type) {
+function check_overload(symbols, name, new_type, loc) {
     if (symbols[name] !== undefined) {
         if (!(new_type instanceof FunctionType)) {
             throw new InterpreterError("Cannot overload a non-function", loc);
@@ -555,30 +561,30 @@ function Variable(name, parameters, type, body, loc) {
 }
 Variable.prototype = Object.create(Declaration.prototype);
 Variable.prototype.evaluate = function (symbols, check_only) {
-    // add myself to symbol table to support recursion
+    // add dummy entry of myself to symbol table to support recursion
     // Return type must be specified for recursion
-    symbols = copy_symbols(symbols);
+    var new_symbols = copy_symbols(symbols);
     var type;
-    if (this.name !== null && this.type !== null) {
+    if (this.name !== null && this.type !== null && this.parameters.length > 0) {
          type = generate_function_type(
              this.parameters.map(
                  function (p) {
-                     return p.type.evaluate(symbols);
+                     return p.type.evaluate(new_symbols);
                  }
              )
-             , this.type.evaluate(symbols)
+             , this.type.evaluate(new_symbols)
          );
-         check_overload(symbols, this.name, type, this.location);
-         if (symbols[this.name] === undefined) {
-             symbols[this.name] = [];
+         check_overload(new_symbols, this.name, type, this.location);
+         if (new_symbols[this.name] === undefined) {
+             new_symbols[this.name] = [];
          }
-         symbols[this.name].push(new Value(type, undefined));
+         new_symbols[this.name].push(new Value(type, undefined));
     }
     // transform to function expression
     // mutual recursion is currently not supported
     var initialiser
         = (new FunctionExpression(this.parameters, this.type, this.body, this.location))
-            .evaluate(symbols, check_only);
+            .evaluate(new_symbols, check_only);
     if (type === undefined) {
         type = initialiser.type;
     }
@@ -592,8 +598,9 @@ Variable.prototype.declare = function (symbols, check_only) {
     } else {
         symbols[this.name].push(initialiser);
     }
-    // needed for proper recursion
-    if (initialiser.type instanceof FunctionType) {
+    // put evaluation result into the initialiser's symbol table to support
+    // recursion
+    if (this.parameters.length > 0) {
         initialiser.value.symbols[this.name] = symbols[this.name];
     }
 };
@@ -752,7 +759,7 @@ Call.prototype.evaluate = function (symbols, check_only) {
             closure_symbols[lhs.value.parameter.name] 
                 = [new Value(type.parameter, rhs.value)];
             stack.unshift(this.location);
-            var result = lhs.value.body.evaluate(closure_symbols);
+            var result = lhs.value.body.evaluate(new_scope(closure_symbols));
             stack.shift();
             if (!result.type.compatibleWith(type.return)) {
                 this.error("Internal error: should have been checked already");
@@ -807,7 +814,10 @@ Identifier.prototype = Object.create(Expression.prototype);
 Identifier.prototype.evaluate 
     = function (symbols, check_only, argument_type, type_acceptable) {
         if (symbols[this.name] === undefined) {
-            this.error("Cannot resolve symbol " + this.name);
+            if (symbols['@next'] === undefined) {
+                this.error("Cannot resolve symbol " + this.name);
+            }
+            return this.evaluate(symbols['@next'], check_only, argument_type, type_acceptable);
         }
         var ans;
         if (argument_type !== undefined) {
@@ -875,15 +885,14 @@ FunctionExpression.prototype.evaluate = function (symbols, check_only) {
     }
     var type = this.type === null ? null : this.type.evaluate(symbols);
     // A function is a scope
-    symbols = copy_symbols(symbols);
+    var closure_symbols = new_scope(symbols);
     switch (this.parameters.length) {
       case 0:
-        var ans = this.body.evaluate(symbols, check_only);
+        var ans = this.body.evaluate(closure_symbols, check_only);
         ans.type = get_return_type(type, ans.type);
         return ans;
       case 1:
         var param_type = this.parameters[0].type.evaluate(symbols);
-        var closure_symbols = copy_symbols(symbols);
         closure_symbols[this.parameters[0].name] 
             = [new Value(param_type, undefined)];
         var return_type;
@@ -891,14 +900,14 @@ FunctionExpression.prototype.evaluate = function (symbols, check_only) {
         if (type !== null && check_only) {
             return_type = type;
         } else {
-            return_type = get_return_type(type, this.body.evaluate(closure_symbols, true).type);
+            return_type = get_return_type(type, this.body.evaluate(new_scope(closure_symbols), true).type);
         }
         return new Value(
             new FunctionType(param_type, return_type)
             , {
                 parameter : this.parameters[0],
                 body : this.body,
-                symbols : copy_symbols(symbols),
+                symbols : closure_symbols,
             }
         );
       default:
@@ -1023,7 +1032,7 @@ TemplateApplication.prototype.evaluate = function (symbols, check_only) {
      // put the template arguments into the parameters
      if (template instanceof Template) {
         if (template.parameters.length === args.length) {
-            var template_symbols = copy_symbols(symbols);
+            var template_symbols = new_scope(symbols);
             for (var i = 0; i < args.length; ++i) {
                 template_symbols[template.parameters[i]] = [args[i]];
             }

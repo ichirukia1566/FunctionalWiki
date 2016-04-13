@@ -1,0 +1,5 @@
+#code#
+@var f = flip<@Integer, @Integer, @Integer> @operator-<@Integer>;
+
+f 1 5
+#end#
