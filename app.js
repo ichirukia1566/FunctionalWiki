@@ -95,12 +95,12 @@ app.post (
                     e.toString = function () {
                         return 'Syntax Error:\n' + e.message + '\n\n' + 'at line ' + e.location.start.line + ' column ' + e.location.start.column;
                     }
+                }
                 console.log(e);
                 res.send(e.toString());
             }
             res.end();
         }
-        
     }
 );
 
