@@ -20,7 +20,11 @@ module.exports.plain_text = function plain_text_generator(value) {
         quote = '/';
     }
     if (type.compatibleWith(symbols['StyledText'][0])) {
-        quote = '';
+        quote = '%' + value.styles.map(
+            function (sty) {
+                return sty.value.join('');
+            }
+        ).join('/') + '%';
     }
     if (type.compatibleWith(symbols['TableCell'][0])) {
         quote = '|';
@@ -85,14 +89,14 @@ module.exports.html_text = function html_text_generator(value) {
         end_tag = "</span>";
     }
     if (type.compatibleWith(symbols['TableCell'][0])) {
-        start_tag = "<td>";
+        start_tag = "<td class=\"innerTd\">";
         end_tag = "</td>";
     }
     if (type.compatibleWith(symbols['Heading'][0])) {
         if (value.level <= 3) {
             start_tag = "<h" + (value.level + 1) + ">";
             end_tag = "</h" + (value.level + 1) + "><hr>\n";
-        } else {
+        } else { // for heading level larger than 3, use <h4>; otherwise, heading would be smaller than the actual content
             start_tag = "<h4>";
             end_tag = "</h4><hr>\n";
         }
@@ -102,7 +106,7 @@ module.exports.html_text = function html_text_generator(value) {
         return start_tag + html_text_generator(value.content, symbols) + end_tag;
     }
     if (type.compatibleWith(symbols['Table'][0])) {
-        return ("\n<table>\n" + value.cells.map(
+        return ("\n<table class=\"innerTable\">\n" + value.cells.map(
             function (row) {
                 return ("<tr>\n" + row.map(
                     function (cell) {
@@ -117,11 +121,6 @@ module.exports.html_text = function html_text_generator(value) {
     }
     if (type.compatibleWith(symbols['ExternalLink'][0])) {
         return ("<a href=\"" + value.url.join('') + "\">" + html_text_generator(value.content) + "</a>");
-
-        /*plain_text_generator(value.content) 
-            + ' [' 
-            + value.url.join('') 
-            + ']';*/
     }
     if (type.compatibleWith(symbols['TextSequence'][0])) {
         return value.content.map(

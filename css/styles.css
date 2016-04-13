@@ -3,6 +3,7 @@
 	width: 20%;
 	padding: 0 0 0 0;
 	background-color: #F5F5F5;
+	align: center;
 }
 .sidebar1 ul, .sidebar1 ol { 
 	padding: 0 15px 15px 40px; 
@@ -21,7 +22,10 @@
 .innerContent {
 	margin-left: 20px;
 }
-table, th, td {
+.innerTable {
+	border: 1px solid black;
+}
+.innerTd {
 	border: 1px solid black;
 }
 footer {
