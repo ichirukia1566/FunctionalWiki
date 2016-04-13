@@ -4,7 +4,7 @@ var stack = [];
 var natives = require('./natives');
 
 function InterpreterError(message, loc) {
-    this.name = "InterpreterError";
+    this.name = "Interpreter Error";
     this.message = message;
     stack.unshift(loc);
     this.call_stack = stack.slice();
@@ -14,7 +14,7 @@ function InterpreterError(message, loc) {
 InterpreterError.prototype = Object.create(Error.prototype);
 InterpreterError.prototype.toString = function () {
     var message = 
-        this.message 
+        this.name + ": " + this.message 
         + "\n\n"
         + "Call stack:\n";
     var layers = this.call_stack.length - 1;
@@ -26,14 +26,28 @@ InterpreterError.prototype.toString = function () {
     return message;
 }
 
+function ValidationError(message, loc) {
+    InterpreterError.call(this, message, loc);
+    this.name = "Validation Error";
+}
+ValidationError.prototype = Object.create(InterpreterError.prototype);
+
+function RuntimeError(message, loc) {
+    InterpreterError.call(this, message, loc);
+    this.name = "Runtime Error";
+}
+RuntimeError.prototype = Object.create(InterpreterError.prototype);
+
 function NotImplementedException(message) {
-    this.name = "NotImplementedException";
+    this.name = "Not Implemented";
     this.message = message;
 }
 NotImplementedException.prototype = Object.create(Error.prototype);
 
 module.exports.errors = {
     InterpreterError : InterpreterError,
+    ValidationError : ValidationError,
+    RuntimeError : RuntimeError,
     NotImplementedException : NotImplementedException,
 };
 
@@ -225,6 +239,12 @@ Value.prototype.toString = function () {
 
 module.exports.Value = Value;
 
+function new_scope(symbols) {
+    var copy = Object.create(null);
+    copy['@next'] = symbols;
+    return copy;
+}
+
 function copy_symbols(symbols) {
     var copy = Object.create(null);
     for (var name in symbols) {
@@ -239,26 +259,26 @@ function copy_symbols(symbols) {
 
 /** Ensure_that node is overloadable on symbols if it has new_type 
  */
-function check_overload(symbols, name, new_type) {
+function check_overload(symbols, name, new_type, loc) {
     if (symbols[name] !== undefined) {
         if (!(new_type instanceof FunctionType)) {
-            throw new InterpreterError("Cannot overload a non-function", loc);
+            throw new ValidationError("Cannot overload a non-function", loc);
         }
         symbols[name].forEach(
             function (variant) {
                 if (variant instanceof ClassType) {
-                    throw new InterpreterError(name + " has already been declared as a class", loc);
+                    throw new ValidationError(name + " has already been declared as a class", loc);
                 } else if (variant instanceof Template) {
-                    throw new InterpreterError(name + " has already been declared as a template", loc);
+                    throw new ValidationError(name + " has already been declared as a template", loc);
                 } else if (variant.type instanceof FunctionType) {
                     if (
                         variant.type.parameter.compatibleWith(new_type.parameter)
                         || new_type.parameter.compatibleWith(variant.type.parameter)
                     ) {
-                        throw new InterpreterError("An overload of compatible parameter already exists.", loc);
+                        throw new ValidationError("An overload of compatible parameter already exists.", loc);
                     }
                 } else {
-                    throw new InterpreterError("Cannot overload a non-function", loc);
+                    throw new ValidationError("Cannot overload a non-function", loc);
                 }
             }
         );
@@ -278,8 +298,8 @@ function generate_function_type(parameter_types, type) {
 
 function Node() {}
 Node.prototype = {
-    error : function (message) {
-        throw new InterpreterError(message, this.location);
+    error : function (error_class, message) {
+        throw new error_class(message, this.location);
     }
 };
 
@@ -328,7 +348,7 @@ IdentifierTypeExpression.prototype.evaluate = function (symbols) {
     var ans = (new Identifier(this.name, this.location))
         .evaluate(symbols, true, undefined, true);
     if (!(ans instanceof Type)) {
-        this.error("Non-type argument specified in type context");
+        this.error(ValidationError, "Non-type argument specified in type context");
     }
     return ans;
 };
@@ -387,7 +407,7 @@ Article.prototype.evaluate = function (symbols, no_std) {
                 , segment.location
             ).evaluate(symbols);
             if (!result.type.compatibleWith(text_type)) {
-                throw new InterpreterError("Segment cannot be converted into document text", segment.location);
+                throw new ValidationError("Segment cannot be converted into document text", segment.location);
             }
             return result.value;
         }
@@ -425,7 +445,7 @@ var do_import;
                 var fs = require('fs');
                 text = fs.readFileSync(file, 'utf8');
             } catch (e) {
-                throw new InterpreterError("The article/library to import " + title + " does not exist", loc);
+                throw new ValidationError("The article/library to import " + title + " does not exist", loc);
             }
             
             var symbols = Object.create(null);
@@ -461,7 +481,7 @@ Import.prototype.declare = function (symbols) {
     var import_symbols = do_import(this.from, this.location);
     var node = this;
     if (import_symbols[node.identifier] === undefined) {
-        node.error(node.identifier + " does not exist in imported article");
+        node.error(ValidationError, node.identifier + " does not exist in imported article");
     }
     if (node.to === null) {
         node.to = node.identifier;
@@ -476,7 +496,7 @@ Import.prototype.declare = function (symbols) {
                 symbols[node.to].push(overload);
             } else {
                 if (symbols[node.to] !== undefined) {
-                    node.error(node.to + " has already been declared");
+                    node.error(ValidationError, node.to + " has already been declared");
                 }
                 symbols[node.to] = [overload];
             }
@@ -502,7 +522,7 @@ Class.prototype.evaluate = function (symbols) {
     node.members.forEach(
         function (member) {
             if (class_type.findMember(member.name) !== null) {
-                node.error(member.name + " has already been declared");
+                node.error(ValidationError, member.name + " has already been declared");
             }
             class_type.members[member.name] 
                 = generate_function_type(
@@ -526,6 +546,7 @@ Class.prototype.evaluate = function (symbols) {
                     )
                 ) {
                     node.error(
+                        ValidationError, 
                         "Default value of member " 
                         + member.name 
                         + " in class " 
@@ -541,7 +562,7 @@ Class.prototype.evaluate = function (symbols) {
 };
 Class.prototype.declare = function (symbols) {
     if (symbols[this.name] !== undefined) {
-        this.error(this.name + " has already been declared");
+        this.error(ValidationError, this.name + " has already been declared");
     }
     symbols[this.name] = [this.evaluate(symbols)];
 };
@@ -555,30 +576,30 @@ function Variable(name, parameters, type, body, loc) {
 }
 Variable.prototype = Object.create(Declaration.prototype);
 Variable.prototype.evaluate = function (symbols, check_only) {
-    // add myself to symbol table to support recursion
+    // add dummy entry of myself to symbol table to support recursion
     // Return type must be specified for recursion
-    symbols = copy_symbols(symbols);
+    var new_symbols = copy_symbols(symbols);
     var type;
-    if (this.name !== null && this.type !== null) {
+    if (this.name !== null && this.type !== null && this.parameters.length > 0) {
          type = generate_function_type(
              this.parameters.map(
                  function (p) {
-                     return p.type.evaluate(symbols);
+                     return p.type.evaluate(new_symbols);
                  }
              )
-             , this.type.evaluate(symbols)
+             , this.type.evaluate(new_symbols)
          );
-         check_overload(symbols, this.name, type, this.location);
-         if (symbols[this.name] === undefined) {
-             symbols[this.name] = [];
+         check_overload(new_symbols, this.name, type, this.location);
+         if (new_symbols[this.name] === undefined) {
+             new_symbols[this.name] = [];
          }
-         symbols[this.name].push(new Value(type, undefined));
+         new_symbols[this.name].push(new Value(type, undefined));
     }
     // transform to function expression
     // mutual recursion is currently not supported
     var initialiser
         = (new FunctionExpression(this.parameters, this.type, this.body, this.location))
-            .evaluate(symbols, check_only);
+            .evaluate(new_symbols, check_only);
     if (type === undefined) {
         type = initialiser.type;
     }
@@ -592,8 +613,9 @@ Variable.prototype.declare = function (symbols, check_only) {
     } else {
         symbols[this.name].push(initialiser);
     }
-    // needed for proper recursion
-    if (initialiser.type instanceof FunctionType) {
+    // put evaluation result into the initialiser's symbol table to support
+    // recursion
+    if (this.parameters.length > 0) {
         initialiser.value.symbols[this.name] = symbols[this.name];
     }
 };
@@ -607,7 +629,7 @@ function Template(name, parameters, content, loc) {
 Template.prototype = Object.create(Declaration.prototype);
 Template.prototype.declare = function (symbols) {
     if (symbols[this.name] !== undefined) {
-        this.error(this.name + "has already been declared");
+        this.error(ValidationError, this.name + "has already been declared");
     }
     symbols[this.name] = [this];
 };
@@ -656,10 +678,10 @@ Update.prototype.evaluate = function (symbols, check_only) {
                 var init = assignment.value.evaluate(symbols, check_only);
                 var member_type = new_object.type.findMember(name);
                 if (member_type === null) {
-                    node.error("Member " + name + " does not exist");
+                    node.error(ValidationError, "Member " + name + " does not exist");
                 }
                 if (!init.type.compatibleWith(member_type)) {
-                    node.error("Member " + name + " has the wrong type");
+                    node.error(ValidationError, "Member " + name + " has the wrong type");
                 }
                 new_object.value[name] = init.value;
             }
@@ -689,6 +711,7 @@ Update.prototype.evaluate = function (symbols, check_only) {
                 }
                 if (initialiser === undefined) {
                     node.error(
+                        ValidationError,
                         "Member " 
                         + name 
                         + " has no default value. A user-supplied value must be given."
@@ -701,7 +724,7 @@ Update.prototype.evaluate = function (symbols, check_only) {
     } else if (object.type instanceof ClassType) {
         return check_only ? object : update_members(object);
     } else {
-        this.error("Cannot update members of a non-class object");
+        this.error(ValidationError, "Cannot update members of a non-class object");
     }
 }
 
@@ -720,10 +743,10 @@ Call.prototype.evaluate = function (symbols, check_only) {
     var type = lhs.type;
     if (type instanceof ArrayType) {
         if (lhs.type.elements === undefined) {
-            this.error("Cannot dereference an empty array");
+            this.error(ValidationError, "Cannot dereference an empty array");
         }
         if (!rhs.type.compatibleWith(NativeType.Integer)) {
-            this.error("Array index must be an integer");
+            this.error(ValidationError, "Array index must be an integer");
         }
         if (check_only) {
             return new Value(lhs.type.elements, undefined)
@@ -732,6 +755,7 @@ Call.prototype.evaluate = function (symbols, check_only) {
                 return new Value(lhs.type.elements, lhs.value[rhs.value]);
             } else {
                 this.error(
+                    RuntimeError, 
                     "Array index overflow (index " 
                     + rhs.value 
                     + " called with an array of length " 
@@ -743,7 +767,7 @@ Call.prototype.evaluate = function (symbols, check_only) {
         }
     } else if (type instanceof FunctionType) {
         if (!rhs.type.compatibleWith(type.parameter)) {
-            this.error("Argument type " + rhs.type + " does not match parameter type " + type.parameter);
+            this.error(ValidationError, "Argument type " + rhs.type + " does not match parameter type " + type.parameter);
         }
         if (check_only) {
             return new Value(type.return, undefined);
@@ -752,15 +776,15 @@ Call.prototype.evaluate = function (symbols, check_only) {
             closure_symbols[lhs.value.parameter.name] 
                 = [new Value(type.parameter, rhs.value)];
             stack.unshift(this.location);
-            var result = lhs.value.body.evaluate(closure_symbols);
+            var result = lhs.value.body.evaluate(new_scope(closure_symbols));
             stack.shift();
             if (!result.type.compatibleWith(type.return)) {
-                this.error("Internal error: should have been checked already");
+                this.error(ValidationError, "Internal error: should have been checked already");
             }
             return new Value(type.return, result.value);
         }
     } else {
-        this.error("Cannot call a value other than a function or an array");
+        this.error(ValidationError, "Cannot call a value other than a function or an array");
     }
 };
 
@@ -790,7 +814,7 @@ ArrayLiteral.prototype.evaluate = function (symbols, check_only) {
                 if (element_type.compatibleWith(object.type)) {
                     element_type = object.type;
                 } else {
-                    node.error("Array literal contains inconsistent types: " + element_type + " and " + object.type);
+                    node.error(ValidationError, "Array literal contains inconsistent types: " + element_type + " and " + object.type);
                 }
             }
             return object.value;
@@ -807,7 +831,10 @@ Identifier.prototype = Object.create(Expression.prototype);
 Identifier.prototype.evaluate 
     = function (symbols, check_only, argument_type, type_acceptable) {
         if (symbols[this.name] === undefined) {
-            this.error("Cannot resolve symbol " + this.name);
+            if (symbols['@next'] === undefined) {
+                this.error(ValidationError, "Cannot resolve symbol " + this.name);
+            }
+            return this.evaluate(symbols['@next'], check_only, argument_type, type_acceptable);
         }
         var ans;
         if (argument_type !== undefined) {
@@ -834,19 +861,19 @@ Identifier.prototype.evaluate
                 }
             );
             if (ans === undefined) {
-                this.error("Cannot resolve suitable overload of " + this.name);
+                this.error(ValidationError, "Cannot resolve suitable overload of " + this.name);
             }
         } else {
             if (symbols[this.name].length > 1) {
-                this.error(this.name + " is overloaded. Please select one by applying a template argument.");
+                this.error(ValidationError, this.name + " is overloaded. Please select one by applying a template argument.");
             }
             ans = symbols[this.name][0];
         }
         if (!check_only && ans instanceof Value && ans.value === undefined) {
-            this.error(this.name + " is not yet completely initialised");
+            this.error(ValidationError, this.name + " is not yet completely initialised");
         }
         if (!type_acceptable && !(ans instanceof Value)) {
-            this.error("Non-value " + this.name + " used in value context");
+            this.error(ValidationError, "Non-value " + this.name + " used in value context");
         }
         return ans;
     };
@@ -860,10 +887,22 @@ function FunctionExpression(parameters, type, body, loc) {
 FunctionExpression.prototype = Object.create(Expression.prototype);
 FunctionExpression.prototype.evaluate = function (symbols, check_only) {
     var node = this;
+    node.parameters.forEach(
+        function (p) {
+            node.parameters.forEach(
+                function (q) {
+                    if (p !== q && p.name === q.name) {
+                        node.error(ValidationError, "Duplicate parameter name " + p.name);
+                    }
+                }
+            );
+        }
+    );
     function get_return_type(declared, actual) {
         if (declared !== null) {
             if (!actual.compatibleWith(declared)) {
                 node.error(
+                    ValidationError, 
                     "Type of function body " + actual 
                     + " does not match declared type " + declared
                 );
@@ -875,15 +914,14 @@ FunctionExpression.prototype.evaluate = function (symbols, check_only) {
     }
     var type = this.type === null ? null : this.type.evaluate(symbols);
     // A function is a scope
-    symbols = copy_symbols(symbols);
+    var closure_symbols = new_scope(symbols);
     switch (this.parameters.length) {
       case 0:
-        var ans = this.body.evaluate(symbols, check_only);
+        var ans = this.body.evaluate(closure_symbols, check_only);
         ans.type = get_return_type(type, ans.type);
         return ans;
       case 1:
         var param_type = this.parameters[0].type.evaluate(symbols);
-        var closure_symbols = copy_symbols(symbols);
         closure_symbols[this.parameters[0].name] 
             = [new Value(param_type, undefined)];
         var return_type;
@@ -891,14 +929,14 @@ FunctionExpression.prototype.evaluate = function (symbols, check_only) {
         if (type !== null && check_only) {
             return_type = type;
         } else {
-            return_type = get_return_type(type, this.body.evaluate(closure_symbols, true).type);
+            return_type = get_return_type(type, this.body.evaluate(new_scope(closure_symbols), true).type);
         }
         return new Value(
             new FunctionType(param_type, return_type)
             , {
                 parameter : this.parameters[0],
                 body : this.body,
-                symbols : copy_symbols(symbols),
+                symbols : closure_symbols,
             }
         );
       default:
@@ -928,7 +966,7 @@ If.prototype.evaluate = function (symbols, check_only) {
     // evaluate the condition
     var cond = this.condition.evaluate(symbols, check_only);
     if (!cond.type.compatibleWith(NativeType.Boolean)) {
-        this.error("If condition must be a boolean");
+        this.error(ValidationError, "If condition must be a boolean");
     }
     var lhs_t = this.then.evaluate(symbols, true).type;
     var rhs_t = this.else.evaluate(symbols, true).type;
@@ -938,7 +976,7 @@ If.prototype.evaluate = function (symbols, check_only) {
     } else if (lhs_t.compatibleWith(rhs_t)) {
         type = rhs_t;
     } else {
-        this.error("The types between if-branches must be the same");
+        this.error(ValidationError, "The types between if-branches must be the same");
     }
     if (check_only) {
         return new Value(type, undefined);
@@ -1023,16 +1061,16 @@ TemplateApplication.prototype.evaluate = function (symbols, check_only) {
      // put the template arguments into the parameters
      if (template instanceof Template) {
         if (template.parameters.length === args.length) {
-            var template_symbols = copy_symbols(symbols);
+            var template_symbols = new_scope(symbols);
             for (var i = 0; i < args.length; ++i) {
                 template_symbols[template.parameters[i]] = [args[i]];
             }
             return template.content.evaluate(template_symbols, check_only);
         } else {
-            this.error("Template argument number mismatch");
+            this.error(ValidationError, "Template argument number mismatch");
         }
      } else {
-         this.error("Cannot apply template arguments to a non-template");
+         this.error(ValidationError, "Cannot apply template arguments to a non-template");
      }
 }
 
@@ -1046,11 +1084,11 @@ Member.prototype = Object.create(Expression.prototype);
 Member.prototype.evaluate = function (symbols, check_only) {
     var object = this.object.evaluate(symbols, check_only);
     if (!(object.type instanceof ClassType)) {
-        this.error("Cannot get member of a non-class type");
+        this.error(ValidationError, "Cannot get member of a non-class type");
     }
     var type = object.type.findMember(this.member);
     if (type === null) {
-        this.error("Member " + this.member + " does not exist");
+        this.error(ValidationError, "Member " + this.member + " does not exist");
     }
     if (check_only) {
         return new Value(type, undefined);
@@ -1069,7 +1107,7 @@ Instance.prototype.evaluate = function (symbols, check_only) {
     var object = this.object.evaluate(symbols, check_only);
     var type = this.type.evaluate(symbols);
     if (!(object.type instanceof ClassType)) {
-        this.error("Cannot apply @instance on a non-class value");
+        this.error(ValidationError, "Cannot apply @instance on a non-class value");
     }
     if (check_only) {
         return new Value(NativeType.Boolean, undefined);
@@ -1090,10 +1128,10 @@ Cast.prototype.evaluate = function (symbols, check_only) {
     var type = this.type.evaluate(symbols);
     var default_object = this.default.evaluate(symbols, true);
     if (!(default_value.type.compatibleWith(type))) {
-        this.error("The default value of @cast is not compatible with the target type");
+        this.error(ValidationError, "The default value of @cast is not compatible with the target type");
     }
     if (!(object.type instanceof ClassType)) {
-        this.error("Cannot apply @instance on a non-class value");
+        this.error(ValidationError, "Cannot apply @instance on a non-class value");
     }
     if (check_only) {
         return new Value(type, undefined);
@@ -1113,7 +1151,7 @@ function ErrorExpression(message, loc) {
 ErrorExpression.prototype = Object.create(Expression.prototype);
 ErrorExpression.prototype.evaluate = function (symbols, check_only) {
     if (!check_only) {
-        this.error(this.message);
+        this.error(RuntimeError, this.message);
     } else {
         return new Value(new ErrorType(), undefined);
     }

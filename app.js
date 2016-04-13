@@ -39,7 +39,7 @@ app.get(
                 } catch (e) {
                     if (e.name === 'SyntaxError') {
                         e.toString = function () {
-                            return 'SyntaxError:\n' + e.message + '\n\n' + 'at line ' + e.location.start.line + ' column ' + e.location.start.column;
+                            return 'Syntax Error:\n' + e.message + '\n\n' + 'at line ' + e.location.start.line + ' column ' + e.location.start.column;
                         }
                     }
                     console.log(e);
@@ -92,9 +92,8 @@ app.post (
                 res.send(generators.plain_text(result.value));
             } catch (e) {
                 if (e.name === 'SyntaxError') {
-                        e.toString = function () {
-                            return 'SyntaxError:\n' + e.message + '\n\n' + 'at line ' + e.location.start.line + ' column ' + e.location.start.column;
-                        }
+                    e.toString = function () {
+                        return 'Syntax Error:\n' + e.message + '\n\n' + 'at line ' + e.location.start.line + ' column ' + e.location.start.column;
                     }
                 console.log(e);
                 res.send(e.toString());

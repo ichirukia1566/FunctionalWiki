@@ -1,0 +1,3 @@
+#code#
+@if(true, 3, 'a')
+#end#
