@@ -1,0 +1,6 @@
+#code#
+@class Base {}
+@class Derived1 : Base {}
+@class Derived2 : Base {}
+@var x = [@function : Base {Derived1{}}, Derived2{}];
+#end#

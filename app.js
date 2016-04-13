@@ -31,7 +31,7 @@ app.get(
             } catch (e) {
                 if (e.name === 'SyntaxError') {
                     e.toString = function () {
-                        return 'SyntaxError:\n' + e.message + '\n\n' + 'at line ' + e.location.start.line + ' column ' + e.location.start.column;
+                        return 'Syntax Error:\n' + e.message + '\n\n' + 'at line ' + e.location.start.line + ' column ' + e.location.start.column;
                     }
                 }
                 console.log(e);

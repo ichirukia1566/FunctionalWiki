@@ -24,7 +24,7 @@ var natives = {
             return String.fromCodePoint(get_param('x', symbols).value);
         } catch (e) {
             if (e instanceof RangeError) {
-                throw new InterpreterError("Invalid character code " + get_param('x', symbols).value, loc);
+                throw new RuntimeError("Invalid character code " + get_param('x', symbols).value, loc);
             } else {
                 throw e;
             }
@@ -39,7 +39,7 @@ var natives = {
     parseInt : function (symbols, loc) {
         var x = parseInt(get_param('x', symbols).value.join(''), 10);
         if ((x | 0) !== x) {
-            throw new InterpreterError(get_param('x', symbols).value.join('') + " does not form a valid 32-bit integer", loc);
+            throw new RuntimeError(get_param('x', symbols).value.join('') + " does not form a valid 32-bit integer", loc);
         }
         return x;
     },
