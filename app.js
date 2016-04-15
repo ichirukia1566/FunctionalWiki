@@ -3,6 +3,7 @@ var fs = require('fs');
 var parser = require('./parser');
 var generators = require('./generators');
 var bodyParser = require('body-parser');
+var encoder = new require('node-html-encoder').Encoder('entity');
 
 var app = express();
 
@@ -29,7 +30,7 @@ app.get(
                 res.sendFile(__dirname + "/create.html");
             } else {
                 var text = fs.readFileSync('articles/' + title, 'utf8');
-                var html_head = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head>\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />\n<title>" + title + "</title>\n<link rel=\"stylesheet\" type=\"text/css\" href=\"/css/styles.css\">\n<script src=\"https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js\"></script>\n<script>$(document).ready(function alignColumns() {var height_c = $(\"#content\").height();if (height_c > 225) {$(\"#sidebar\").height(height_c);}});</script>\n</head>\n<body>\n<section class=\"container\">\n<div id=\"sidebar\" class=\"sidebar1\">\n<div class=\"innerSidebar\">\n<a href=\"/Main Page\"><img src=\"/images/logo.png\" align=\"middle\"></a>\n<ul class=\"nav\">\n<li><a href=\"/create\">Create new page</li>\n<li><a href=\"/factorial\">Factorial</a></li>\n<li><a href=\"/overflow\">Overflow</a></li>\n</ul>\n</div>\n</div>\n<div id=\"content\" class=\"content\">\n<div class=\"innerContent\">\n<h1 style=\"display:inline;\">" + title.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();}) + "</h1><a href=\"/create\" class=\"buttonLike\">Edit</a><hr>";
+                var html_head = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head>\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />\n<title>" + title + "</title>\n<link rel=\"stylesheet\" type=\"text/css\" href=\"/css/styles.css\">\n<script src=\"https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js\"></script>\n<script>$(document).ready(function alignColumns() {var height_c = $(\"#content\").height();if (height_c > 225) {$(\"#sidebar\").height(height_c);}});</script>\n</head>\n<body>\n<section class=\"container\">\n<div id=\"sidebar\" class=\"sidebar1\">\n<div class=\"innerSidebar\">\n<a href=\"/Main Page\"><img src=\"/images/logo.png\" align=\"middle\"></a>\n<ul class=\"nav\">\n<li><a href=\"/create\">Create new page</li>\n<li><a href=\"/factorial\">Factorial</a></li>\n<li><a href=\"/overflow\">Overflow</a></li>\n</ul>\n</div>\n</div>\n<div id=\"content\" class=\"content\">\n<div class=\"innerContent\">\n<h1 style=\"display:inline;\">" + title.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();}) + "</h1><a href=\"/create?" + encoder.htmlEncode(escape(title)) + "\" class=\"buttonLike\">Edit</a><hr>";
                 var html_tail = "\n</div>\n</div>\n</section>\n<footer class=\"container1\">\n<p>Copyright &copy; The Functional Wiki. All rights reserved.</p>\n</footer></body>\n</html>";
                 try {
                     result = parser.parse(text, {title : title}).evaluate(Object.create(null));
