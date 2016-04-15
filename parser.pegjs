@@ -40,7 +40,7 @@
 }
 
 head = x:('#code#' p:program '#end#' { return p; }/ passthrough)* {
-    return new nodes.Article(x, named_location());
+    return new nodes.Article(x, options.title, named_location());
 }
 
 passthrough = $(!'#code#' .)

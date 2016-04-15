@@ -356,8 +356,8 @@ IdentifierTypeExpression.prototype.toString = function () {
     return this.name.toString();
 }
 
-function Article(segments, loc) {
-    this.name = null;
+function Article(segments, name, loc) {
+    this.name = name;
     this.segments = [];
     var node = this;
     segments.forEach(
