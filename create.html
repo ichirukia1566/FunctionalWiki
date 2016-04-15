@@ -6,11 +6,28 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
 <script>
 $(document).ready(function () {
+	var type, code, saveFilename, loadFilename, placeholderName;
+	var prevPageURL = unescape(document.referrer);
+	var prevPageTitle = prevPageURL.substr(prevPageURL.lastIndexOf('/') + 1);
+	//alert(prevPageTitle);
+	if (prevPageTitle != '') {
+		type = "load";
+		loadFilename = prevPageTitle;
+		code = "";
+		$.post("http://fyp15026s1.cs.hku.hk/create",{t: type,c: code, n: loadFilename}, function(data) {
+        	if(data != '') {
+            	$("#code").val(data);
+          	} else {
+          		$("#code").val('');
+          		$("#saveName").val(prevPageTitle);
+          	}
+     	});
+	}
 	var height_c = $("#content").height();
 	if (height_c > 160) { 
 		$("#sidebar").height(height_c); // if the content is too long, expand the sidebar height
 	}
-	var type, code, saveFilename, loadFilename, placeholderName;
+	
 	$("#save").click(function() {
 		type = "save";
       	code = $("#code").val();
@@ -52,6 +69,7 @@ $(document).ready(function () {
 		<div id="sidebar" class="sidebar1">
 			<a href="/Main Page"><img src="images/logo.png" align="middle"></a>
 			<ul>
+				<li><a href="/create">Create new page</a></li>
 				<li><a href="/factorial">Factorial</a></li>
 				<li><a href="/overflow">Overflow</a></li>
 			<ul>
