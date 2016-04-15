@@ -28,6 +28,14 @@
 .innerTd {
 	border: 1px solid black;
 }
+.contentsTable {
+	border: 0px solid black;
+	width: 100%;
+}
+.contentsTd {
+	border: 0px solid black;
+	width: 25%;
+}
 footer {
 	padding: 10px 0;
 	position: relative;

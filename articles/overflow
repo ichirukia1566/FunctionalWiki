@@ -19,7 +19,7 @@ table
                 cell (text (pow 2 input)),
             ]
         }
-        (range 0 63)
+        (range 0 100)
     )
 
 #end#

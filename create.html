@@ -1,28 +1,12 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!DOCTYPE html>
+<html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta charset="UTF-8" />
 <title>Create New Page</title>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
 <script>
 $(document).ready(function () {
-	var type, code, saveFilename, loadFilename, placeholderName;
-	var prevPageURL = unescape(document.referrer);
-	var prevPageTitle = prevPageURL.substr(prevPageURL.lastIndexOf('/') + 1);
-	//alert(prevPageTitle);
-	if (prevPageTitle != '') {
-		type = "load";
-		loadFilename = prevPageTitle;
-		code = "";
-		$.post("http://fyp15026s1.cs.hku.hk/create",{t: type,c: code, n: loadFilename}, function(data) {
-        	if(data != '') {
-            	$("#code").val(data);
-          	} else {
-          		$("#code").val('');
-          		$("#saveName").val(prevPageTitle);
-          	}
-     	});
-	}
+	var type, code, name;
 	var height_c = $("#content").height();
 	if (height_c > 160) { 
 		$("#sidebar").height(height_c); // if the content is too long, expand the sidebar height
@@ -31,8 +15,12 @@ $(document).ready(function () {
 	$("#save").click(function() {
 		type = "save";
       	code = $("#code").val();
-      	saveFilename = $("#saveName").val();
-      	$.post("http://fyp15026s1.cs.hku.hk/create",{t: type, c: code, n: saveFilename}, function(data) {
+      	name = $("#name").val();
+      	if (name === "") {
+      		alert("Please enter a page name!");
+      		return;
+      	}
+      	$.post("http://fyp15026s1.cs.hku.hk/create",{t: type, c: code, n: name}, function(data) {
         	if(data === 'done') {
             	alert("save success");
           	} else {
@@ -42,11 +30,16 @@ $(document).ready(function () {
     });
     $("#load").click(function() {
       	type = "load";
-      	loadFilename=$("#loadName").val();
+      	name=$("#name").val();
       	code = "";
-      	$.post("http://fyp15026s1.cs.hku.hk/create",{t: type,c: code, n: loadFilename}, function(data) {
+      	if (name === "") {
+      		alert("Please enter a page name!");
+      		return;
+      	}
+      	$.post("http://fyp15026s1.cs.hku.hk/create",{t: type,c: code, n: name}, function(data) {
         	if(data != '') {
             	$("#code").val(data);
+            	alert("load success");
           	} else {
           		alert("load failure");
           	}
@@ -54,9 +47,9 @@ $(document).ready(function () {
     });
     $("#preview").click(function() {
     	type = "preview";
-    	placeholderName = "newpage";
+    	name = "";
     	code = $("#code").val();
-    	$.post("http://fyp15026s1.cs.hku.hk/create",{t: type,c: code, n: placeholderName}, function(data) {
+    	$.post("http://fyp15026s1.cs.hku.hk/create",{t: type,c: code, n: name}, function(data) {
         	$("#output").val(data);
      	});
     });
@@ -67,12 +60,13 @@ $(document).ready(function () {
 <body>
 	<section class="container">
 		<div id="sidebar" class="sidebar1">
-			<a href="/Main Page"><img src="images/logo.png" align="middle"></a>
+			<a href="/Main_Page"><img src="images/logo.png" alt="Functional Wiki"></a>
 			<ul>
 				<li><a href="/create">Create new page</a></li>
+				<li><a href="/contents">Contents</a></li>
 				<li><a href="/factorial">Factorial</a></li>
 				<li><a href="/overflow">Overflow</a></li>
-			<ul>
+			</ul>
 		</div>
 		<div id="content" class="content">
 			<div class="innerContent">
@@ -80,25 +74,23 @@ $(document).ready(function () {
 				<table>
     				<tr>
       					<td rowspan="3">
-        					<textarea id="code" cols="50" rows="25">#code#&#13;&#10;apply_style ([style "color" "darkolivegreen", style "font-weight" "bold"]) (text "Darkolivegreen bold text!")&#13;&#10;#end#
-        					</textarea>
+        					<textarea id="code" cols="50" rows="25"></textarea>
       					</td>
-      					<td>
-        					<td align="center"><textarea id="saveName"></textarea><br><button type="button" id="save">Save</button></td>
-      					</td>
+      					<td style="text-align: center;background-color: #F5F5F5;">Please enter pagename:<textarea id="name" style="display: inline;"></textarea>and press corresponding button.</td>
+      					
       					<td rowspan="3">
         					<textarea readonly="readonly" id="output" cols = "50" rows="25"></textarea>
       					</td>
 				    </tr>
 				    <tr>
-				      	<td></td>
-				      	<td align="center"><textarea id="loadName"></textarea><br><button type="button" id="load">Load</button></td>
-				      	<td></td>
+				    	<td style="text-align: center;background-color: #F5F5F5;">
+        					<button type="button" id="save" style="display: inline;">Save</button>
+        					<button type="button" id="load" style="display: inline;">Load</button>
+      					</td>
+      					
 				    </tr>
 				    <tr>
-				      	<td></td>
-				      	<td align="center"><button type="button" id="preview">Preview</button></td>
-				      	<td></td>
+				      	<td style="text-align: center;background-color: #F5F5F5;"><button type="button" id="preview" style="display: inline;">Preview</button></td>
 				    </tr>
 				</table>
 			</div>
