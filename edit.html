@@ -28,7 +28,7 @@ $(document).ready(function () {
   $("#save").click(function() {
     type = "save";
         code = $("#code").val();
-        name = $("#name").val();
+        name = prevPageTitle;
         if (name === "") {
           alert("Please enter a page name!");
           return;
@@ -43,7 +43,7 @@ $(document).ready(function () {
     });
     $("#load").click(function() {
         type = "load";
-        name=$("#name").val();
+        name=prevPageTitle;
         code = "";
         if (name === "") {
           alert("Please enter a page name!");

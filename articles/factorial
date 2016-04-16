@@ -1,4 +1,4 @@
-This is a test script. The factorial of 6 is #code#
+This is a test script. The factorial of 7 is #code#
 @var factorial(n : @Integer) : @Integer = @if (n > 0, n * factorial(n - 1), 1);
-factorial 6
+factorial 7
 #end#.
