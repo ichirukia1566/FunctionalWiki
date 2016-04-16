@@ -7,6 +7,21 @@
 <script>
 $(document).ready(function () {
 	var type, code, name;
+	var prevPageURL = unescape(document.referrer);
+  	var prevPageTitle = prevPageURL.substr(prevPageURL.lastIndexOf('/') + 1);
+  	if (prevPageTitle != '') {
+	    type = "load";
+	    name = prevPageTitle;
+	    code = "";
+	    $.post("http://fyp15026s1.cs.hku.hk/create",{t: type,c: code, n: name}, function(data) {
+	        if (data != "") {
+	        	$("#contentTitle").html("new page");
+	        } else {
+	        	$("#contentTitle").html(prevPageTitle);
+	        	$("#name").html(prevPageTitle);
+	        }
+	    });
+  	}
 	var height_c = $("#content").height();
 	if (height_c > 160) { 
 		$("#sidebar").height(height_c); // if the content is too long, expand the sidebar height
@@ -20,13 +35,21 @@ $(document).ready(function () {
       		alert("Please enter a page name!");
       		return;
       	}
-      	$.post("http://fyp15026s1.cs.hku.hk/create",{t: type, c: code, n: name}, function(data) {
-        	if(data === 'done') {
-            	alert("save success");
-          	} else {
-          		alert("save failure");
-          	}
+      	$.post("http://fyp15026s1.cs.hku.hk/contents",{t: type, c: code, n: name}, function(data) {
+        	if ($.inArray(name, data) !== -1) {
+	     		alert("The page " + name + " already exists! Please enter a new name!");
+	     		return;
+     		} else {
+     			$.post("http://fyp15026s1.cs.hku.hk/create",{t: type, c: code, n: name}, function(data) {
+		        	if(data === 'done') {
+		            	alert("save success");
+		          	} else {
+		          		alert("save failure");
+		          	}
+		     	});
+     		}
      	});
+      	
     });
     $("#load").click(function() {
       	type = "load";
@@ -70,7 +93,7 @@ $(document).ready(function () {
 		</div>
 		<div id="content" class="content">
 			<div class="innerContent">
-                            <h1>Editing <span class="name"></span></h1><hr>
+                            <h1>Creating <span id="contentTitle"></span></h1><hr>
 				<table>
     				<tr>
       					<td rowspan="3">
