@@ -1,0 +1,25 @@
+#code#
+@var pow(x : @Integer, y : @Integer) : @Integer {
+    @if (
+        y == 0
+        , 1
+        , @if (
+             y % 2 == 0
+             , pow (x * x) (integer (y / 2))
+             , pow x (y - 1) * x
+        )
+    )
+}
+
+table 
+    (map<@Integer, [TableCell]> 
+        @function(input : @Integer) {
+            [
+                cell (text input),
+                cell (text (pow 2 input)),
+            ]
+        }
+        (range 0 101)
+    )
+
+#end#

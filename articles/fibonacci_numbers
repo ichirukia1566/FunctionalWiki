@@ -1,0 +1,16 @@
+In mathematics, #code#external_link "https://en.wikipedia.org/wiki/Fibonacci_number" (strong (text "Fibonacci numbers"))#end# or Fibonacci sequence are the numbers in the following integer sequence:
+1, 1, 2, 3, 5, 8, 13, 21......
+By definition, the first two numbers in the Fibonacci sequence are 1 and 1, and each subsequent number is the sum of the previous two.
+#code#heading 2 (text ("Some Fibonacci numbers"))#end#
+The first 10 Fibonacci numbers are
+#code#
+@var fib = @function {
+@var fibonacci(n : @Integer) : @Integer = @if (n > 2, fibonacci(n - 1) + fibonacci(n - 2), 1); 
+fibonacci};
+
+table (
+    map<@Integer, [TableCell]> 
+        @function (x : @Integer) {[cell (text x), cell (text (fib x))]}
+        (range 1 10)
+)
+#end#

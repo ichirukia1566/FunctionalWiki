@@ -1,0 +1,14 @@
+This is a test script of #code#external_link "https://en.wikipedia.org/wiki/Fibonacci_number" (strong (text "Fibonacci number"))#end#.
+#code#heading 2 (text ("Some Fibonacci numbers"))#end#
+The first 15 Fibonacci numbers are
+#code#
+@var fib = @function {
+@var fibonacci(n : @Integer) : @Integer = @if (n > 2, fibonacci(n - 1) + fibonacci(n - 2), 1); 
+fibonacci};
+
+table (
+    map<@Integer, [TableCell]> 
+        @function (x : @Integer) {[cell (text (x + 1)), cell (text (fib x))]}
+        (range 0 15)
+)
+#end#
