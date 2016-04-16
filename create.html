@@ -14,7 +14,7 @@ $(document).ready(function () {
 	    name = prevPageTitle;
 	    code = "";
 	    $.post("http://fyp15026s1.cs.hku.hk/create.html",{t: type,c: code, n: name}, function(data) {
-	        if (data == "" && prevPageTitle !== "create.html") {
+	        if (data == "" && prevPageTitle !== "create.html" && prevPageTitle !== "edit.html" && prevPageTitle !== "contents.html") {
 	        	$("#contentTitle").html(prevPageTitle);
 	        	$("#name").html(prevPageTitle);
 	        } else {
