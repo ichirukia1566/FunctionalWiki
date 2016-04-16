@@ -3,11 +3,13 @@ var fs = require('fs');
 var parser = require('./parser');
 var generators = require('./generators');
 var bodyParser = require('body-parser');
+var favicon = require('serve-favicon');
 
 var app = express();
 
 app.use("/css", express.static(__dirname + '/css'));
 app.use("/images", express.static(__dirname + '/images'));
+app.use(favicon(__dirname + '/images/favicon.ico'));
 app.use( bodyParser.json() );       // to support JSON-encoded bodies
 app.use( bodyParser.urlencoded({     // to support URL-encoded bodies
   extended: true
