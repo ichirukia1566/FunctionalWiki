@@ -8,7 +8,7 @@
 <script>
 $(document).ready(function () {
 	var dummy = 0;
-	$.post("http://fyp15026s1.cs.hku.hk/contents",{d: dummy}, function(data) {
+	$.post("http://fyp15026s1.cs.hku.hk/contents.html",{d: dummy}, function(data) {
 		var tableContents = "";
         	for (var i = 0; i < data.length; i++) {
         		if (i % 4 == 0) {
@@ -32,8 +32,8 @@ $(document).ready(function () {
 		<div id="sidebar" class="sidebar1">
 			<a href="/Main_Page"><img src="images/logo.png" alt="Functional Wiki"></a>
 			<ul>
-				<li><a href="/create">Create new page</a></li>
-				<li><a href="/contents">Contents</a></li>
+				<li><a href="/create.html">Create new page</a></li>
+				<li><a href="/contents.html">Contents</a></li>
 				<li><a href="/factorial">Factorial</a></li>
 				<li><a href="/overflow">Overflow</a></li>
 			</ul>

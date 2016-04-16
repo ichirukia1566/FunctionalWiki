@@ -13,8 +13,8 @@ $(document).ready(function () {
 	    type = "load";
 	    name = prevPageTitle;
 	    code = "";
-	    $.post("http://fyp15026s1.cs.hku.hk/create",{t: type,c: code, n: name}, function(data) {
-	        if (data == "" && prevPageTitle !== "create") {
+	    $.post("http://fyp15026s1.cs.hku.hk/create.html",{t: type,c: code, n: name}, function(data) {
+	        if (data == "" && prevPageTitle !== "create.html") {
 	        	$("#contentTitle").html(prevPageTitle);
 	        	$("#name").html(prevPageTitle);
 	        } else {
@@ -35,12 +35,12 @@ $(document).ready(function () {
       		alert("Please enter a page name!");
       		return;
       	}
-      	$.post("http://fyp15026s1.cs.hku.hk/contents",{t: type, c: code, n: name}, function(data) {
+      	$.post("http://fyp15026s1.cs.hku.hk/contents.html",{t: type, c: code, n: name}, function(data) {
         	if ($.inArray(name, data) !== -1) {
 	     		alert("The page " + name + " already exists! Please enter a new name!");
 	     		return;
      		} else {
-     			$.post("http://fyp15026s1.cs.hku.hk/create",{t: type, c: code, n: name}, function(data) {
+     			$.post("http://fyp15026s1.cs.hku.hk/create.html",{t: type, c: code, n: name}, function(data) {
 		        	if(data === 'done') {
 		            	alert("save success");
 		          	} else {
@@ -59,7 +59,7 @@ $(document).ready(function () {
       		alert("Please enter a page name!");
       		return;
       	}
-      	$.post("http://fyp15026s1.cs.hku.hk/create",{t: type,c: code, n: name}, function(data) {
+      	$.post("http://fyp15026s1.cs.hku.hk/create.html",{t: type,c: code, n: name}, function(data) {
         	if(data != '') {
             	$("#code").val(data);
             	alert("load success");
@@ -72,7 +72,7 @@ $(document).ready(function () {
     	type = "preview";
     	name = "";
     	code = $("#code").val();
-    	$.post("http://fyp15026s1.cs.hku.hk/create",{t: type,c: code, n: name}, function(data) {
+    	$.post("http://fyp15026s1.cs.hku.hk/create.html",{t: type,c: code, n: name}, function(data) {
         	$("#output").val(data);
      	});
     });
@@ -85,8 +85,8 @@ $(document).ready(function () {
 		<div id="sidebar" class="sidebar1">
 			<a href="/Main_Page"><img src="images/logo.png" alt="Functional Wiki"></a>
 			<ul>
-				<li><a href="/create">Create new page</a></li>
-				<li><a href="/contents">Contents</a></li>
+				<li><a href="/create.html">Create new page</a></li>
+				<li><a href="/contents.html">Contents</a></li>
 				<li><a href="/factorial">Factorial</a></li>
 				<li><a href="/overflow">Overflow</a></li>
 			</ul>

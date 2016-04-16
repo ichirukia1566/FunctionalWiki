@@ -25,15 +25,15 @@ app.get(
     , function (req, res) {
         var title = unescape(req.path).replace(/^\//, '');
         try {
-            if (title === "create") {
+            if (title === "create.html") {
                 res.sendFile(__dirname + "/create.html");
-            } else if (title === "edit") {
+            } else if (title === "edit.html") {
                 res.sendFile(__dirname + "/edit.html");
-            } else if (title === "contents") {
+            } else if (title === "contents.html") {
                 res.sendFile(__dirname + "/contents.html");
             } else {
                 var text = fs.readFileSync('articles/' + title, 'utf8');
-                var html_head = "<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\" />\n<title>" + title + "</title>\n<link rel=\"stylesheet\" type=\"text/css\" href=\"/css/styles.css\">\n<script type=\"text/javascript\" src=\"https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js\"></script>\n<script>$(document).ready(function alignColumns() {var height_c = $(\"#content\").height();if (height_c > 250) {$(\"#sidebar\").height(height_c);}});</script>\n</head>\n<body>\n<section class=\"container\">\n<div id=\"sidebar\" class=\"sidebar1\">\n<div class=\"innerSidebar\">\n<a href=\"/Main_Page\"><img src=\"/images/logo.png\" alt=\"Functional Wiki\"></a>\n<ul class=\"nav\">\n<li><a href=\"/create\">Create new page</li>\n<li><a href=\"/contents\">Contents</a></li>\n<li><a href=\"/factorial\">Factorial</a></li>\n<li><a href=\"/overflow\">Overflow</a></li>\n</ul>\n</div>\n</div>\n<div id=\"content\" class=\"content\">\n<div class=\"innerContent\">\n<h1 style=\"display:inline;\">" + title.split("_").join(" ").replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();}) + "</h1><a href=\"/edit\" class=\"buttonLike\">Edit</a><hr>";
+                var html_head = "<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\" />\n<title>" + title + "</title>\n<link rel=\"stylesheet\" type=\"text/css\" href=\"/css/styles.css\">\n<script type=\"text/javascript\" src=\"https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js\"></script>\n<script>$(document).ready(function alignColumns() {var height_c = $(\"#content\").height();if (height_c > 250) {$(\"#sidebar\").height(height_c);}});</script>\n</head>\n<body>\n<section class=\"container\">\n<div id=\"sidebar\" class=\"sidebar1\">\n<div class=\"innerSidebar\">\n<a href=\"/Main_Page\"><img src=\"/images/logo.png\" alt=\"Functional Wiki\"></a>\n<ul class=\"nav\">\n<li><a href=\"/create.html\">Create new page</li>\n<li><a href=\"/contents.html\">Contents</a></li>\n<li><a href=\"/factorial\">Factorial</a></li>\n<li><a href=\"/overflow\">Overflow</a></li>\n</ul>\n</div>\n</div>\n<div id=\"content\" class=\"content\">\n<div class=\"innerContent\">\n<h1 style=\"display:inline;\">" + title.split("_").join(" ").replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();}) + "</h1><a href=\"/edit.html\" class=\"buttonLike\">Edit</a><hr>";
                 var html_tail = "\n</div>\n</div>\n</section>\n<footer class=\"container1\">\n<p>Copyright &copy; The Functional Wiki. All rights reserved.</p>\n</footer></body>\n</html>";
                 try {
                     result = parser.parse(text, {title : title}).evaluate(Object.create(null));
@@ -63,7 +63,7 @@ app.get(
 );
 
 app.post (
-    '/create'
+    '/create.html'
     , function (req, res) {
         var success = 1;
         var type = req.body.t;
@@ -109,7 +109,7 @@ app.post (
 );
 
 app.post(
-    '/contents'
+    '/contents.html'
     , function (req, res) {
         try {
             var result = fs.readdirSync(__dirname + '/articles/');
