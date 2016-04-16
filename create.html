@@ -14,11 +14,11 @@ $(document).ready(function () {
 	    name = prevPageTitle;
 	    code = "";
 	    $.post("http://fyp15026s1.cs.hku.hk/create",{t: type,c: code, n: name}, function(data) {
-	        if (data != "") {
-	        	$("#contentTitle").html("new page");
-	        } else {
+	        if (data == "" && prevPageTitle !== "create") {
 	        	$("#contentTitle").html(prevPageTitle);
 	        	$("#name").html(prevPageTitle);
+	        } else {
+	        	$("#contentTitle").html("new page");
 	        }
 	    });
   	}
