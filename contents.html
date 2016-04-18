@@ -8,7 +8,7 @@
 <script>
 $(document).ready(function () {
 	var dummy = 0;
-	$.post("http://fyp15026s1.cs.hku.hk/contents.html",{d: dummy}, function(data) {
+	$.post("/contents.html",{d: dummy}, function(data) {
 		var tableContents = "";
         	for (var i = 0; i < data.length; i++) {
         		if (i % 4 == 0) {

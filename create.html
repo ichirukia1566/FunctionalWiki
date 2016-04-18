@@ -13,7 +13,7 @@ $(document).ready(function () {
 	    type = "load";
 	    name = prevPageTitle;
 	    code = "";
-	    $.post("http://fyp15026s1.cs.hku.hk/create.html",{t: type,c: code, n: name}, function(data) {
+	    $.post("/create.html",{t: type,c: code, n: name}, function(data) {
 	        if (data == "" && prevPageTitle !== "create.html" && prevPageTitle !== "edit.html" && prevPageTitle !== "contents.html") {
 	        	$("#contentTitle").html(prevPageTitle);
 	        	$("#name").html(prevPageTitle);
@@ -35,12 +35,12 @@ $(document).ready(function () {
       		alert("Please enter a page name!");
       		return;
       	}
-      	$.post("http://fyp15026s1.cs.hku.hk/contents.html",{t: type, c: code, n: name}, function(data) {
+      	$.post("/contents.html",{t: type, c: code, n: name}, function(data) {
         	if ($.inArray(name, data) !== -1) {
 	     		alert("The page " + name + " already exists! Please enter a new name!");
 	     		return;
      		} else {
-     			$.post("http://fyp15026s1.cs.hku.hk/create.html",{t: type, c: code, n: name}, function(data) {
+     			$.post("/create.html",{t: type, c: code, n: name}, function(data) {
 		        	if(data === 'done') {
 		            	alert("save success");
 		          	} else {
@@ -59,7 +59,7 @@ $(document).ready(function () {
       		alert("Please enter a page name!");
       		return;
       	}
-      	$.post("http://fyp15026s1.cs.hku.hk/create.html",{t: type,c: code, n: name}, function(data) {
+      	$.post("/create.html",{t: type,c: code, n: name}, function(data) {
         	if(data != '') {
             	$("#code").val(data);
             	alert("load success");
@@ -72,7 +72,7 @@ $(document).ready(function () {
     	type = "preview";
     	name = "";
     	code = $("#code").val();
-    	$.post("http://fyp15026s1.cs.hku.hk/create.html",{t: type,c: code, n: name}, function(data) {
+    	$.post("/create.html",{t: type,c: code, n: name}, function(data) {
         	$("#output").val(data);
      	});
     });
